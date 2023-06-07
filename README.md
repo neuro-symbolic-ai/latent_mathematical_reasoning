@@ -16,7 +16,7 @@ Data: https://drive.google.com/drive/folders/1M8XQOuzIL0GgRQjcnmtffUTX7qhWYuFk?u
 - DEEP LEARNING FOR SYMBOLIC MATHEMATICS
 - https://github.com/Jan21/symbols-and-patterns
 - On the Paradox of Learning to Reason from Data
-- A Survey of Deep Learning for Mathematical Reasoning
+- A Survey of Deep Learning for Mathematical Reasoning (https://github.com/lupantech/dl4math)
 - Systematic Generalization and Emergent Structures in Transformers Trained on Structured Tasks
 - The Devil is in the Detail: Simple Tricks Improve Systematic Generalization of Transformers
 - Testing the General Deductive Reasoning Capacity of Large Language Models Using OOD Examples
