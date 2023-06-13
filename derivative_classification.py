@@ -5,8 +5,9 @@ import numpy as np
 from tqdm import tqdm
 import evaluate
 from datasets import load_dataset, Dataset
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer, AdamW
+from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
+from torch.optim import AdamW
 from latent_reasoning.LatentReasoning import LatentReasoning
     
 class Experiment:
@@ -18,10 +19,10 @@ class Experiment:
         self.max_length = max_length
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         self.dataset = self.process_dataset(dataset_path, neg)
-        self.tokenized_datasets = self.dataset.map(self.tokenize_function, batched=True)
-        self.model = LatentReasoning(model) #AutoModelForSequenceClassification.from_pretrained(model, num_labels=2)
+        self.tokenized_datasets = self.dataset.map(self.tokenize_function, batched=False)
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.model = LatentReasoning(model, self.device)
 
         #self.training_args = TrainingArguments(
         #        output_dir="output/"+dataset_path.split("/")[-1]+"_"+self.model_name,
@@ -45,13 +46,13 @@ class Experiment:
         formatted_examples = []
         # create an entry for each positive example
         for example in tqdm(d_json, desc="Loading Dataset"):
-            formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "label": 1})
+            formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "label": 1.0})
             #create an entry for each negative example
             count_neg = 0
             for negative in example["negatives"]:
                 if count_neg == neg:
                     break
-                formatted_examples.append({"text": "equation1": example['premise_expression'], "equation2": example['variable'], "target": negative ,input_text, 'label': 0})
+                formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": negative , 'label': -1.0})
                 count_neg += 1
         print("Data examples", formatted_examples[:4])
         #split randomly between train, dev, and test set
@@ -60,9 +61,9 @@ class Experiment:
         return dataset_split
 
     def tokenize_function(self, examples):
-        examples["equation1"] = self.tokenizer(examples["equation1"], padding=True, truncation=True, return_tensors='pt')
-        examples["equation2"] = self.tokenizer(examples["equation2"], padding=True, truncation=True, return_tensors='pt')
-        examples["target"] = self.tokenizer(examples["target"], padding=True, truncation=True, return_tensors='pt')
+        examples["equation1"] = self.tokenizer(examples["equation1"], padding="max_length", truncation=True, max_length = self.max_length)
+        examples["equation2"] = self.tokenizer(examples["equation2"], padding="max_length", truncation=True, max_length = self.max_length)
+        examples["target"] = self.tokenizer(examples["target"], padding="max_length", truncation=True, max_length = self.max_length) #, return_tensors='pt')
         return examples
 
     def compute_metrics(self, eval_pred):
@@ -85,36 +86,71 @@ class Experiment:
         #)
         #trainer.train()
         #trainer.save_model()
-
+        device = self.device
         self.model.to(device)
         self.model.train()
 
-        train_loader = DataLoader(self.tokenized_datasets["train"].with_format("torch"), batch_size=4, shuffle = True) 
-        optim = AdamW(self.model.parameters(), lr=5e-5)
+        train_loader = DataLoader(self.tokenized_datasets["train"].with_format("torch"), batch_size=8, shuffle = True)
+        eval_loader = DataLoader(self.tokenized_datasets["test"].with_format("torch"), batch_size=4, shuffle = True)
+        optim = AdamW(self.model.parameters(), lr=3e-5)
+        print("Start training...")
 
-        for epoch in range(3):
-            for batch in train_loader:
+        eval_steps_cycle = 2000
+        steps = 0
+        for epoch in tqdm(range(16), desc = "Training"):
+            for batch in tqdm(train_loader):
+                steps += 1
                 optim.zero_grad()
-                equation1 = batch["equation1"].to(device)
-                equation2 = batch["equation2"].to(device)
-                target = batch["target"].to(device)
-                labels = batch['labels'].to(device)
-                outputs = model(equation1, equation2, target, labels=labels)
-                print(outputs)
+                equation1 = batch["equation1"]
+                equation2 = batch["equation2"]
+                target = batch["target"]
+                labels = batch['label']
+                outputs = self.model(equation1, equation2, target, labels)
                 loss = outputs[0]
                 loss.backward()
                 optim.step()
-        model.eval()
+                #evaluation
+                if steps % eval_steps_cycle == 0:
+                    self.model.eval()
+                    scores_pos = []
+                    scores_neg = []
+                    print("EVALUATION")
+                    num_instances = 2000
+                    eval_steps = 0
+                    for eval_batch in tqdm(eval_loader):
+                        eval_steps += 1
+                        equation1 = eval_batch["equation1"]
+                        equation2 = eval_batch["equation2"]
+                        target = eval_batch["target"]
+                        labels = eval_batch["label"]
+                        outputs = self.model(equation1, equation2, target, labels)
+                        #print("-----------------------------------")
+                        #print(outputs[1])
+                        #print(outputs[2])
+                        #print(outputs[3])
+                        #print("-----------------------------------")
+                        for label in outputs[2]:
+                            if label == 1.0:
+                                scores_pos.append(outputs[1].detach().cpu().numpy())
+                            else:
+                                scores_neg.append(outputs[1].detach().cpu().numpy())
+                        if eval_steps > num_instances:
+                            break
+                    print("positive:", np.mean(scores_pos))
+                    print("negative:", np.mean(scores_neg))
+                    print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
+                    self.model.train()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="differentiation.json", nargs="?",
                     help="Which dataset to use")
-    parser.add_argument("--model", type=str, default="sentence-transformers/bert-base-nli-mean-tokens", nargs="?",
+    parser.add_argument("--model", type=str, default="distilbert-base-uncased", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=8, nargs="?",
                     help="Batch size.")
-    parser.add_argument("--max_length", type=int, default=256, nargs="?",
+    parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=float, default=12.0, nargs="?",
                     help="Num epochs.")
