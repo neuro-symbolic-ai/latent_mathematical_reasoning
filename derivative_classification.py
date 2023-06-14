@@ -68,11 +68,11 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        predictions = np.argmax(logits, axis=-1)
-        majority_class_preds = [1 for pred in predictions]
+        #predictions = np.argmax(logits, axis=-1)
+        majority_class_preds = [1 for pred in logits]
         majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
         print("majority_class_baseline:", majority_baseline_score)
-        score = self.metric.compute(predictions=predictions, references=labels)
+        score = self.metric.compute(predictions=logits, references=labels)
         return score
 
     def train_and_eval(self):
@@ -97,7 +97,7 @@ class Experiment:
 
         eval_steps_cycle = 2000
         steps = 0
-        for epoch in tqdm(range(16), desc = "Training"):
+        for epoch in tqdm(range(32), desc = "Training"):
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
@@ -117,6 +117,8 @@ class Experiment:
                     print("EVALUATION")
                     num_instances = 2000
                     eval_steps = 0
+                    logits_metric = []
+                    label_metric = []
                     for eval_batch in tqdm(eval_loader):
                         eval_steps += 1
                         equation1 = eval_batch["equation1"]
@@ -129,16 +131,24 @@ class Experiment:
                         #print(outputs[2])
                         #print(outputs[3])
                         #print("-----------------------------------")
-                        for label in outputs[2]:
+                        for score in outputs[1]:
+                            if score > 0.0:
+                                logits_metric.append(1)
+                            else:
+                                logits_metric.append(0)
+                        for label in labels:
                             if label == 1.0:
                                 scores_pos.append(outputs[1].detach().cpu().numpy())
+                                label_metric.append(1)
                             else:
                                 scores_neg.append(outputs[1].detach().cpu().numpy())
+                                label_metric.append(0)
                         if eval_steps > num_instances:
                             break
                     print("positive:", np.mean(scores_pos))
                     print("negative:", np.mean(scores_neg))
                     print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
+                    print(self.compute_metrics([logits_metric, label_metric]))
                     self.model.train()
 
 
