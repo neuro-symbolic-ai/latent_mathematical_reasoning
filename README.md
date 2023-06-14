@@ -6,6 +6,7 @@ Data: https://drive.google.com/drive/folders/1M8XQOuzIL0GgRQjcnmtffUTX7qhWYuFk?u
 - Mthematical Reasoning in Latent Space
 - Symbolic Brittleness in Sequence Models: on Systematic Generalization in Symbolic Mathematics
 - A Symbolic Framework for Systematic Evaluation of Mathematical Reasoning with Transformers
+- HOList: An Environment for Machine Learning of Higher-Order Theorem Proving
 - Latent Action Space for Efficient Planning in Theorem Proving
 - Graph Representations for Higher-Order Logic and Theorem Proving
 - Can Neural Networks Learn Symbolic Rewriting?
