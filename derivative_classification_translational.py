@@ -110,14 +110,18 @@ class Experiment:
                 #evaluation
                 if steps % eval_steps_cycle == 0:
                     self.model.eval()
-                    scores_pos = []
-                    scores_neg = []
                     print("EVALUATION")
                     num_instances = 2000
                     for loader in eval_loaders:
                         eval_steps = 0
+                        scores_pos = []
+                        scores_neg = []
                         logits_metric = []
+                        logits_metric_diff = []
+                        logits_metric_int = []
                         label_metric = []
+                        label_metric_diff = []
+                        label_metric_int = []
                         for eval_batch in tqdm(eval_loaders[loader]):
                             eval_steps += 1
                             equation1 = eval_batch["equation1"]
@@ -129,22 +133,40 @@ class Experiment:
                             for score in outputs[1]:
                                 if score > 0.0:
                                     logits_metric.append(1)
+                                    if operation == 0:
+                                        logits_metric_diff.append(1)
+                                    else:
+                                        logits_metric_int.append(1)
                                 else:
                                     logits_metric.append(0)
+                                    if operation == 0:
+                                        logits_metric_diff.append(0)
+                                    else:
+                                        logits_metric_int.append(0)
                             for label in labels:
                                 if label == 1.0:
                                     scores_pos.append(outputs[1].detach().cpu().numpy())
                                     label_metric.append(1)
+                                    if operation == 0:
+                                        label_metric_diff.append(1)
+                                    else:
+                                        label_metric_int.append(1)
                                 else:
                                     scores_neg.append(outputs[1].detach().cpu().numpy())
                                     label_metric.append(0)
+                                    if operation == 0:
+                                        label_metric_diff.append(0)
+                                    else:
+                                        label_metric_int.append(0)
                             if eval_steps > num_instances:
                                 break
                         print("=============="+loader+"==============")
                         print("positive:", np.mean(scores_pos))
                         print("negative:", np.mean(scores_neg))
                         print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
-                        print(self.compute_metrics([logits_metric, label_metric]))
+                        print("tot:", self.compute_metrics([logits_metric, label_metric]))
+                        print("differentiation:", self.compute_metrics([logits_metric_diff, label_metric_diff])
+                        print("integration:", self.compute_metrics([logits_metric_int, label_metric_int])
                     self.model.train()
 
 

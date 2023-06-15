@@ -16,8 +16,8 @@ class TransLatentReasoning(nn.Module):
        #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
         self.ov = nn.Embedding(n_operations, self.dim, padding_idx=0)
-        self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.double, device = device))
-        self.Wo = torch.nn.Parameter(torch.tensor(np.random.uniform(-1,1, (n_operations, self.dim)), dtype=torch.double, requires_grad=True, device=self.device))
+        self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
+        self.Wo = torch.nn.Parameter(torch.tensor(np.random.uniform(-1,1, (n_operations, self.dim)), dtype=torch.float, requires_grad=True, device=self.device))
         self.similarity_fct = nn.functional.cosine_similarity #util.cos_sim
         self.loss_function = nn.MSELoss() #nn.BCEWithLogitsLoss() #nn.MSELoss()
 
