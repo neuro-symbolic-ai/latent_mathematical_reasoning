@@ -25,4 +25,5 @@ Data: https://drive.google.com/drive/folders/1M8XQOuzIL0GgRQjcnmtffUTX7qhWYuFk?u
 - Large Language Models are In-Context Semantic Reasoners rather than Symbolic Reasoners
 - LIME: Learning Inductive Bias for Primitives of Mathematical Reasoning
 - https://openreview.net/forum?id=pbUcKxmiM54
+- Faith and Fate: Limits of Transformers on Compositionality
 
