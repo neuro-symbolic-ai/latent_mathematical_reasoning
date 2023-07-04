@@ -28,25 +28,44 @@ class Experiment:
         #PROCESS DATA
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
+        #test differentiation
+        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
+        self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
+        #test integration
+        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
+        self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
-
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.eval_dict = {
+            "dev_set": self.tokenized_train_datasets["test"],
+            "test_diff" : self.tokenized_test_dataset_diff, 
+            "test_int" : self.tokenized_test_dataset_int, 
+            "contrast_diff" : self.tokenized_contrast_dataset_diff, 
+            "contrast_int" : self.tokenized_contrast_dataset_int
+            }
+        #LOAD METRICS AND MODEL
+        self.metric = evaluate.load("glue", "mrpc")
         self.model = GraphLatentReasoning(model, 2, self.device)
         self.batch_size = batch_size
-
-
 
 
     def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.2):
         #convert dataset into json for dataset loader
 
         formatted_examples = []
-        op_id = 0 ### operation between input and target
-        
+
         for path in dataset_path:
             d_file = open(path, 'r')
             d_json = json.load(d_file)
-            op_id = op_id + 1
+            if "differentiation" in path:
+                op_id = 0
+            elif "integration" in path:
+                op_id = 1
             # create an entry for each positive example
             for example in tqdm(d_json, desc="Loading Dataset"):
                 formatted_examples.append({"equation1": example['srepr_premise_expression'], "equation2": example['srepr_variable'], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
@@ -122,10 +141,6 @@ class Experiment:
     #     return examples
 
 
-
-
-
-
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
         #predictions = np.argmax(logits, axis=-1)
@@ -140,120 +155,79 @@ class Experiment:
     def train_and_eval(self):
         device = self.device
         self.model.to(device)
-        
         self.model.train()
         
-        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=self.batch_size, shuffle=True, collate_fn=pad_collate)
-        dev_loader = DataLoader(self.tokenized_train_datasets["test"].with_format("torch"), batch_size=4, shuffle=True, collate_fn=pad_collate)
-        # train_loader = DataLoader(self.train_dataset["train"].with_format("torch"), batch_size=self.batch_size, shuffle=True, collate_fn=pad_collate)
-        # dev_loader = DataLoader(self.train_dataset["test"].with_format("torch"), batch_size=4, shuffle=True, collate_fn=pad_collate)
-
-        #test_loader = DataLoader(self.tokenized_test_datasets.with_format("torch"), batch_size=4, shuffle=True)
-        #test_vr_loader = DataLoader(self.tokenized_test_vr_datasets.with_format("torch"), batch_size=4, shuffle=True)
-        #test_easy_loader = DataLoader(self.tokenized_test_easy_datasets.with_format("torch"), batch_size=4, shuffle=True)
-
-        eval_loaders = {
-                "dev":dev_loader
-                #"test":test_loader,
-                #"test_vr":test_vr_loader,
-                #"test_easy":test_easy_loader
-                }
-        
+        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=8, shuffle=True)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-
-        eval_steps_cycle = 2000
+        eval_steps_cycle = 500
         steps = 0
-        for epoch in tqdm(range(32), desc = "Training"):
-            print()
-
+        for epoch in tqdm(range(self.epochs), desc = "Training"):
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
-                loss = 0
-                for idx in range(len(batch)):
-                    equation1 = batch[idx]["equation1"]
-                    equation2 = batch[idx]["equation2"] # useless now
-                    target = batch[idx]["target"]
-                    labels = batch[idx]['label'].to(device)
-                    operation = batch[idx]['operation']
-                    outputs = self.model(equation1, equation2, target, operation, labels)
-                    loss = loss + outputs[0]
+                equation1 = batch["equation1"]
+                equation2 = batch["equation2"]
+                target = batch["target"]
+                labels = batch['label']
+                operation = batch['operation']
+                outputs = self.model(equation1, equation2, target, operation, labels)
+                loss = outputs[0]
                 loss.backward()
                 optim.step()
                 #evaluation
                 if steps % eval_steps_cycle == 0:
-                    self.model.eval()
-                    print("EVALUATION")
-                    num_instances = 100000
-                    for loader in eval_loaders:
-                        eval_steps = 0
-                        scores_pos = []
-                        scores_neg = []
-                        logits_metric = []
-                        logits_metric_diff = []
-                        logits_metric_int = []
-                        label_metric = []
-                        label_metric_diff = []
-                        label_metric_int = []
-                        for eval_batch in tqdm(eval_loaders[loader]):
-                            eval_steps += 1
-                            # equation1 = eval_batch["equation1"]
-                            # equation2 = eval_batch["equation2"] # useless now
-                            # target = eval_batch["target"]
-                            # labels = eval_batch["label"]
-                            # operation = eval_batch['operation']
-                            # outputs = self.model(equation1, equation2, target, operation, labels)
-                            for idx in range(len(eval_batch)):
-                                equation1 = eval_batch[idx]["equation1"]
-                                equation2 = eval_batch[idx]["equation2"] # useless now
-                                target = eval_batch[idx]["target"]
-                                labels = eval_batch[idx]['label'].to(device)
-                                operation = eval_batch[idx]['operation']
-                                outputs = self.model(equation1, equation2, target, operation, labels)
-                                batch_index = 0
-                                for score in outputs[1]:
-                                    if score > 0.0:
-                                        logits_metric.append(1)
-                                        if operation - 1 == 0:
-                                            logits_metric_diff.append(1)
-                                        else:
-                                            logits_metric_int.append(1)
-                                    else:
-                                        logits_metric.append(0)
-                                        if operation - 1 == 0:
-                                            logits_metric_diff.append(0)
-                                        else:
-                                            logits_metric_int.append(0)
-                                    batch_index += 1
-                                batch_index = 0
-                                
-                                if labels == 1.0:
-                                    scores_pos.append(outputs[1].detach().cpu().numpy())
-                                    label_metric.append(1)
-                                    if operation - 1 == 0:
-                                        label_metric_diff.append(1)
-                                    else:
-                                        label_metric_int.append(1)
-                                else:
-                                    scores_neg.append(outputs[1].detach().cpu().numpy())
-                                    label_metric.append(0)
-                                    if operation - 1 == 0:
-                                        label_metric_diff.append(0)
-                                    else:
-                                        label_metric_int.append(0)
-                                batch_index += 1
-                            if eval_steps > num_instances:
-                                break   
-                        print("=============="+loader+"==============")
-                        print("positive:", np.mean(scores_pos))
-                        print("negative:", np.mean(scores_neg))
-                        print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
-                        print("tot:", self.compute_metrics([logits_metric, label_metric]))
-                        print("differentiation:", self.compute_metrics([logits_metric_diff, label_metric_diff]))
-                        print("integration:", self.compute_metrics([logits_metric_int, label_metric_int]))
+                    self.evaluation()
                     self.model.train()
+
+
+    def evaluation(self, batch_size = 4):
+        if self.eval_dict == None:
+            print("No evaluation data found!")
+            return
+        #build dataloaders
+        eval_loaders = {}
+        for dataset_name in self.eval_dict:
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True)
+        #START EVALUATION
+        self.model.eval()
+        print("EVALUATION")
+        for loader in eval_loaders:
+            eval_steps = 0
+            scores_pos = []
+            scores_neg = []
+            logits_metric = []
+            label_metric = []
+            for eval_batch in tqdm(eval_loaders[loader], desc = loader):
+                eval_steps += 1
+                equation1 = eval_batch["equation1"]
+                equation2 = eval_batch["equation2"]
+                target = eval_batch["target"]
+                labels = eval_batch["label"]
+                operation = eval_batch['operation']
+                outputs = self.model(equation1, equation2, target, operation, labels)
+                batch_index = 0
+                for score in outputs[1]:
+                    if score > 0.0:
+                        logits_metric.append(1)
+                    else:
+                        logits_metric.append(0)
+                    batch_index += 1
+                batch_index = 0
+                for label in labels:
+                    if label == 1.0:
+                        scores_pos.append(outputs[1].detach().cpu().numpy())
+                        label_metric.append(1)
+                    else:
+                        scores_neg.append(outputs[1].detach().cpu().numpy())
+                        label_metric.append(0)
+                    batch_index += 1
+            print("=============="+loader+"==============")
+            print("positive avg sim:", np.mean(scores_pos))
+            print("negative avg sim:", np.mean(scores_neg))
+            print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
+            print("metrics:", self.compute_metrics([logits_metric, label_metric]))
 
 
 if __name__ == '__main__':
