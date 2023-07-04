@@ -24,19 +24,19 @@ class Experiment:
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
         self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
-        self.tokenized_test_dataset_diff = self.train_dataset.map(self.tokenize_function, batched=False)
-        self.contast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_diff = self.train_dataset.map(self.tokenize_function, batched=False)
+        self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
         #test integration
         self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
-        self.tokenized_test_dataset_int = self.train_dataset.map(self.tokenize_function, batched=False)
-        self.contast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_int = self.train_dataset.map(self.tokenize_function, batched=False)
+        self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
-            "dev_set": self.tokenized_train_datasets["test"]
+            "dev_set": self.tokenized_train_datasets["test"],
             "test_diff" : self.tokenized_test_dataset_diff, 
             "test_int" : self.tokenized_test_dataset_int, 
             "contrast_diff" : self.tokenized_contrast_dataset_diff, 
@@ -45,7 +45,7 @@ class Experiment:
         self.model = TransLatentReasoning(model, 2, self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.2):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.1):
         #convert dataset into json for dataset loader
         formatted_examples = []
         for path in dataset_path:
@@ -69,8 +69,10 @@ class Experiment:
         #split randomly between train, dev, and test set
         dataset = Dataset.from_list(formatted_examples)
         if test_size == 1.0:
+            print(dataset)
             return dataset
         dataset_split = dataset.train_test_split(test_size = test_size)
+        print(dataset_split)
         return dataset_split
 
     def tokenize_function(self, examples):
@@ -97,9 +99,9 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 2000
+        eval_steps_cycle = 4000
         steps = 0
-        for epoch in tqdm(self.epochs, desc = "Training"):
+        for epoch in tqdm(range(self.epochs), desc = "Training"):
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
