@@ -45,7 +45,7 @@ class Experiment:
         self.model = TransLatentReasoning(model, 2, self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.1):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.2):
         #convert dataset into json for dataset loader
         formatted_examples = []
         for path in dataset_path:
@@ -99,7 +99,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 4000
+        eval_steps_cycle = 500
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             for batch in tqdm(train_loader):
