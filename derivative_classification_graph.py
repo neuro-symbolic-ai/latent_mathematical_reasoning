@@ -30,15 +30,15 @@ class Experiment:
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
-        #self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
-        #self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
-        #self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
-        #self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
+        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
+        self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
         #test integration
-        #self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
-        #self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
-        #self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
-        #self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
+        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
+        self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
+        self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
+        self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -158,7 +158,7 @@ class Experiment:
         self.model.to(device)
         self.model.train()
         
-        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=8, shuffle=True)
+        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=8, shuffle=True, collate_fn=pad_collate)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
@@ -168,6 +168,7 @@ class Experiment:
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
+                loss = 0
                 for idx in range(len(batch)):
                     equation1 = batch[idx]["equation1"]
                     equation2 = batch[idx]["equation2"]
@@ -191,7 +192,7 @@ class Experiment:
         #build dataloaders
         eval_loaders = {}
         for dataset_name in self.eval_dict:
-            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True)
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True, collate_fn=pad_collate)
         #START EVALUATION
         self.model.eval()
         print("EVALUATION")
