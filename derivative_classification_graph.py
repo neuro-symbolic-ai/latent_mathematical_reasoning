@@ -17,6 +17,7 @@ class Experiment:
     def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, dataset_name, input_dim = 768, cons_list_sin = ['log', 'exp', 'cos', 'Integer', 'sin', 'Symbol'], cons_list_dou = ['Mul', 'Add', 'Pow']):
         #, cons_list = ['log', 'Mul', 'exp', 'Add', 'Symbol', 'Pow', 'cos', 'Integer', 'sin', '3', '2', '1', '0', '-1', '-2', '-3']):
         self.model_name = model
+        self.epochs = epochs
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.dataset_name = dataset_name
         self.learning_rate = learning_rate
@@ -29,24 +30,24 @@ class Experiment:
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
-        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
-        self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
-        self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
+        #self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
+        #self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
+        #self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
+        #self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
         #test integration
-        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
-        self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
-        self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
+        #self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
+        #self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
+        #self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
+        #self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
             "dev_set": self.tokenized_train_datasets["test"],
-            "test_diff" : self.tokenized_test_dataset_diff, 
-            "test_int" : self.tokenized_test_dataset_int, 
-            "contrast_diff" : self.tokenized_contrast_dataset_diff, 
-            "contrast_int" : self.tokenized_contrast_dataset_int
+            #"test_diff" : self.tokenized_test_dataset_diff, 
+            #"test_int" : self.tokenized_test_dataset_int, 
+            #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
+            #"contrast_int" : self.tokenized_contrast_dataset_int
             }
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
@@ -167,13 +168,14 @@ class Experiment:
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
-                equation1 = batch["equation1"]
-                equation2 = batch["equation2"]
-                target = batch["target"]
-                labels = batch['label']
-                operation = batch['operation']
-                outputs = self.model(equation1, equation2, target, operation, labels)
-                loss = outputs[0]
+                for idx in range(len(batch)):
+                    equation1 = batch[idx]["equation1"]
+                    equation2 = batch[idx]["equation2"]
+                    target = batch[idx]["target"]
+                    labels = batch[idx]['label']
+                    operation = batch[idx]['operation']
+                    outputs = self.model(equation1, equation2, target, operation, labels)
+                    loss = loss + outputs[0]
                 loss.backward()
                 optim.step()
                 #evaluation
@@ -201,28 +203,29 @@ class Experiment:
             label_metric = []
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
                 eval_steps += 1
-                equation1 = eval_batch["equation1"]
-                equation2 = eval_batch["equation2"]
-                target = eval_batch["target"]
-                labels = eval_batch["label"]
-                operation = eval_batch['operation']
-                outputs = self.model(equation1, equation2, target, operation, labels)
-                batch_index = 0
-                for score in outputs[1]:
-                    if score > 0.0:
-                        logits_metric.append(1)
-                    else:
-                        logits_metric.append(0)
-                    batch_index += 1
-                batch_index = 0
-                for label in labels:
-                    if label == 1.0:
-                        scores_pos.append(outputs[1].detach().cpu().numpy())
-                        label_metric.append(1)
-                    else:
-                        scores_neg.append(outputs[1].detach().cpu().numpy())
-                        label_metric.append(0)
-                    batch_index += 1
+                for idx in range(len(eval_batch)):
+                    equation1 = eval_batch[idx]["equation1"]
+                    equation2 = eval_batch[idx]["equation2"]
+                    target = eval_batch[idx]["target"]
+                    labels = eval_batch[idx]["label"]
+                    operation = eval_batch[idx]['operation']
+                    outputs = self.model(equation1, equation2, target, operation, labels)
+                    batch_index = 0
+                    for score in outputs[1]:
+                        if score > 0.0:
+                            logits_metric.append(1)
+                        else:
+                            logits_metric.append(0)
+                        batch_index += 1
+                        batch_index = 0
+                    for label in labels:
+                        if label == 1.0:
+                            scores_pos.append(outputs[1].detach().cpu().numpy())
+                            label_metric.append(1)
+                        else:
+                            scores_neg.append(outputs[1].detach().cpu().numpy())
+                            label_metric.append(0)
+                        batch_index += 1
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
@@ -240,7 +243,7 @@ if __name__ == '__main__':
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=float, default=12.0, nargs="?",
+    parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
     parser.add_argument("--lr", type=float, default=3e-5, nargs="?",
                     help="Learning rate.")
