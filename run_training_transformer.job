@@ -15,4 +15,4 @@ export HF_DATASETS_CACHE=/idiap/temp/mvalentino/.cache/huggingface/datasets/
 export HF_METRICS_CACHE=/idiap/temp/mvalentino/.cache/huggingface/metrics/
 
 
-python /idiap/temp/mvalentino/latent_mathematical_reasoning/derivative_classification_translational.py
+python /idiap/temp/mvalentino/latent_mathematical_reasoning/derivative_classification_transformer.py --model bert-base-uncased
