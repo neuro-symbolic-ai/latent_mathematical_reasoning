@@ -44,10 +44,10 @@ class Experiment:
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
             "dev_set": self.tokenized_train_datasets["test"],
-            #"test_diff" : self.tokenized_test_dataset_diff, 
-            #"test_int" : self.tokenized_test_dataset_int, 
-            #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
-            #"contrast_int" : self.tokenized_contrast_dataset_int
+            "test_diff" : self.tokenized_test_dataset_diff, 
+            "test_int" : self.tokenized_test_dataset_int, 
+            "contrast_diff" : self.tokenized_contrast_dataset_diff, 
+            "contrast_int" : self.tokenized_contrast_dataset_int
             }
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
@@ -129,10 +129,10 @@ class Experiment:
     def tokenize_function(self, examples):
         examples["equation1"] = self.construct_graph(examples["equation1"],examples["equation2"])
         examples["target"] = self.construct_graph(examples["target"], examples["equation2"])
-        if len(examples) != 5:
-            print(examples)
-        if examples["operation"] == 0:
-            print(examples)
+        #if len(examples) != 5:
+        #    print(examples)
+        #if examples["operation"] == 0:
+        #    print(examples)
         return examples
     
     # def tokenize_function(self, examples):
@@ -162,7 +162,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 500
+        #eval_steps_cycle = 4000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             for batch in tqdm(train_loader):
@@ -180,9 +180,10 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.evaluation()
-                    self.model.train()
+                #if steps % eval_steps_cycle == 0:
+            #end epoch evaluation
+            self.evaluation()
+            self.model.train()
 
 
     def evaluation(self, batch_size = 4):
@@ -208,25 +209,21 @@ class Experiment:
                     equation1 = eval_batch[idx]["equation1"]
                     equation2 = eval_batch[idx]["equation2"]
                     target = eval_batch[idx]["target"]
-                    labels = eval_batch[idx]["label"]
+                    label = eval_batch[idx]["label"]
                     operation = eval_batch[idx]['operation']
-                    outputs = self.model(equation1, equation2, target, operation, labels)
+                    outputs = self.model(equation1, equation2, target, operation, label)
                     batch_index = 0
                     for score in outputs[1]:
                         if score > 0.0:
                             logits_metric.append(1)
                         else:
                             logits_metric.append(0)
-                        batch_index += 1
-                        batch_index = 0
-                    for label in labels:
-                        if label == 1.0:
-                            scores_pos.append(outputs[1].detach().cpu().numpy())
-                            label_metric.append(1)
-                        else:
-                            scores_neg.append(outputs[1].detach().cpu().numpy())
-                            label_metric.append(0)
-                        batch_index += 1
+                    if label == 1.0:
+                        scores_pos.append(outputs[1].detach().cpu().numpy())
+                        label_metric.append(1)
+                    else:
+                        scores_neg.append(outputs[1].detach().cpu().numpy())
+                        label_metric.append(0)
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
