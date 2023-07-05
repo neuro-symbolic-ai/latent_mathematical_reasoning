@@ -78,10 +78,8 @@ class Experiment:
         #split randomly between train, dev, and test set
         dataset = Dataset.from_list(formatted_examples)
         if test_size == 1.0:
-            print(dataset)
             return dataset
         dataset_split = dataset.train_test_split(test_size = test_size)
-        print(dataset_split)
         return dataset_split
 
     def tokenize_function(self, examples):
@@ -102,15 +100,15 @@ class Experiment:
     def train_and_eval(self):
         device = self.device
         self.model.to(device)
-        self.model.train()
         
         train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=8, shuffle=True)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        #eval_steps_cycle = 4000
+        eval_steps_cycle = 2000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
+            self.model.train()
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
@@ -124,9 +122,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.evaluation()
-            self.model.train()
+                if steps % eval_steps_cycle == 0:
+                    self.evaluation()
 
 
     def evaluation(self, batch_size = 4):
