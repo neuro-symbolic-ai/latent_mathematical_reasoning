@@ -8,7 +8,7 @@ from datasets import load_dataset, Dataset
 # from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from latent_reasoning.LatentReasoning_graph import GraphLatentReasoning
+from latent_reasoning.LatentReasoning_graph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE, 
 from utils import match_parentheses, pad_collate
 import re
 
@@ -51,7 +51,18 @@ class Experiment:
             }
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
-        self.model = GraphLatentReasoning(model, 2, self.device)
+        ##### Change Model
+        if self.model_name == 'gat':
+            self.model = GraphLatentReasoning_GAT(model, 2, self.device)
+        elif self.model_name == 'gcn':
+            self.model = GraphLatentReasoning_GCN(model, 2, self.device)
+        elif self.model_name == 'graphsage':
+            self.model = GraphLatentReasoning_GraphSAGE(model, 2, self.device)
+        elif self.model_name == 'graphtrans':
+            self.model = GraphLatentReasoning_TransformerConv(model, 2, self.device)
+        else:
+            print("Wrong Model")
+            exit(0)
         self.batch_size = batch_size
 
 
