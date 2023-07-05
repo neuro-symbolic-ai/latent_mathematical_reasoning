@@ -57,13 +57,22 @@ class Experiment:
                 op_id = 1
             # create an entry for each positive example
             for example in tqdm(d_json, desc="Loading Dataset"):
+                #LATEX
                 formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "operation": op_id, "label": 1.0})
+                #SIMPY
+                #formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
                 #create an entry for each negative example
                 count_neg = 0
+                #LATEX
                 for negative in example["negatives"]:
+                #SIMPY
+                #for negative in example["srepr_negatives"]:
                     if count_neg == neg:
                         break
+                    #LATEX
                     formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": negative , "operation": op_id, 'label': -1.0})
+                    #SIMPY
+                    #formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
                     count_neg += 1
         print("Data examples", formatted_examples[:4])
         #split randomly between train, dev, and test set
@@ -99,7 +108,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 500
+        #eval_steps_cycle = 4000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             for batch in tqdm(train_loader):
@@ -115,9 +124,9 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.evaluation()
-                    self.model.train()
+                #if steps % eval_steps_cycle == 0:
+            self.evaluation()
+            self.model.train()
 
 
     def evaluation(self, batch_size = 4):
