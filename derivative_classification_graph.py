@@ -8,7 +8,7 @@ from datasets import load_dataset, Dataset
 # from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from latent_reasoning.TranslationalReasoningGraph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE, 
+from latent_reasoning.TranslationalReasoningGraph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE
 from utils import match_parentheses, pad_collate
 import re
 
