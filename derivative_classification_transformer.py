@@ -23,38 +23,54 @@ class Experiment:
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
-        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, test_size = 1.0)
+        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, training = False, test_size = 1.0)
         self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
-        self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
+        #self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg,  training = False, test_size = 1.0)
+        #self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
         #test integration
-        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, test_size = 1.0)
+        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, training = False, test_size = 1.0)
         self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
-        self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg, test_size = 1.0)
-        self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
+        #self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg,  training = False, test_size = 1.0)
+        #self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
+        #test addition
+        self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
+        self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
+        #test exponentiation
+        self.test_dataset_exp = self.process_dataset(dataset_path = ["data/EVAL_exponentiation.json"], neg = neg, training = False, test_size = 1.0)
+        self.tokenized_test_dataset_exp = self.test_dataset_add.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
             "dev_set": self.tokenized_train_datasets["test"],
             "test_diff" : self.tokenized_test_dataset_diff, 
-            "test_int" : self.tokenized_test_dataset_int, 
-            "contrast_diff" : self.tokenized_contrast_dataset_diff, 
-            "contrast_int" : self.tokenized_contrast_dataset_int
+            "test_int" : self.tokenized_test_dataset_int,
+            "test_add" : self.tokenized_test_dataset_add,
+            "test_exp" : self.tokenized_test_dataset_exp, 
+            #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
+            #"contrast_int" : self.tokenized_contrast_dataset_int
             }
         self.model = TransLatentReasoning(model, 2, self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json"], neg = 1,  test_size = 0.2):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/exponentiation.json"], neg = 1,  training = True, test_size = 0.2):
+        #load operation vocabulary
+        if training:
+            self.operations_voc = {}
+            op_id = 0
+            for path in dataset_path
+                self.operations_voc[op_id] = path.split("/")[-1].replace(".json", "")
+                op_id += 1
         #convert dataset into json for dataset loader
         formatted_examples = []
         for path in dataset_path:
+            #find operation id
+            for entry in self.operations_voc:
+                if self.operations_voc[entry] in path:
+                    op_id = entry
+                    break
             d_file = open(path, 'r')
             d_json = json.load(d_file)
-            if "differentiation" in path:
-                op_id = 0
-            elif "integration" in path:
-                op_id = 1
             # create an entry for each positive example
             for example in tqdm(d_json, desc="Loading Dataset"):
                 #LATEX
@@ -90,7 +106,6 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        #predictions = np.argmax(logits, axis=-1)
         majority_class_preds = [1 for pred in logits]
         majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
         print("majority_class_baseline:", majority_baseline_score)
@@ -105,7 +120,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 2000
+        eval_steps_cycle = 1000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -122,8 +137,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.evaluation()
+                if steps % eval_steps_cycle == 0:
+                    self.evaluation()
 
 
     def evaluation(self, batch_size = 4):
@@ -168,8 +183,8 @@ class Experiment:
                         scores_neg.append(outputs[1].detach().cpu().numpy())
                         label_metric.append(0)
                     batch_index += 1
-                #if eval_steps > max_steps:
-                    #break
+                if eval_steps > max_steps:
+                    break
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
