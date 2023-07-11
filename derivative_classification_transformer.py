@@ -139,6 +139,7 @@ class Experiment:
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
+            max_steps = 500
             scores_pos = []
             scores_neg = []
             logits_metric = []
@@ -167,6 +168,8 @@ class Experiment:
                         scores_neg.append(outputs[1].detach().cpu().numpy())
                         label_metric.append(0)
                     batch_index += 1
+                #if eval_steps > max_steps:
+                    #break
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
@@ -185,7 +188,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=3e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
