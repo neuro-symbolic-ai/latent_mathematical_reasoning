@@ -36,8 +36,8 @@ class Experiment:
         self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
         self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
         #test exponentiation
-        self.test_dataset_exp = self.process_dataset(dataset_path = ["data/EVAL_exponentiation.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_exp = self.test_dataset_add.map(self.tokenize_function, batched=False)
+        self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json"], neg = neg, training = False, test_size = 1.0)
+        self.tokenized_test_dataset_sub = self.test_dataset_sub.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -46,19 +46,19 @@ class Experiment:
             "test_diff" : self.tokenized_test_dataset_diff, 
             "test_int" : self.tokenized_test_dataset_int,
             "test_add" : self.tokenized_test_dataset_add,
-            "test_exp" : self.tokenized_test_dataset_exp, 
+            "test_sub" : self.tokenized_test_dataset_sub, 
             #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
             #"contrast_int" : self.tokenized_contrast_dataset_int
             }
-        self.model = TransLatentReasoning(model, 2, self.device)
+        self.model = TransLatentReasoning(model, len(self.operations_voc.keys()), self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/exponentiation.json"], neg = 1,  training = True, test_size = 0.2):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json"], neg = 1,  training = True, test_size = 0.2):
         #load operation vocabulary
         if training:
             self.operations_voc = {}
             op_id = 0
-            for path in dataset_path
+            for path in dataset_path:
                 self.operations_voc[op_id] = path.split("/")[-1].replace(".json", "")
                 op_id += 1
         #convert dataset into json for dataset loader
@@ -120,7 +120,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 1000
+        eval_steps_cycle = 2000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -137,8 +137,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.evaluation()
+                #if steps % eval_steps_cycle == 0:
+            self.evaluation()
 
 
     def evaluation(self, batch_size = 4):
@@ -183,8 +183,8 @@ class Experiment:
                         scores_neg.append(outputs[1].detach().cpu().numpy())
                         label_metric.append(0)
                     batch_index += 1
-                if eval_steps > max_steps:
-                    break
+                #if eval_steps > max_steps:
+                #    break
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
