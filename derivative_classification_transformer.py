@@ -12,14 +12,14 @@ from latent_reasoning.TranslationalReasoningTransformer import TransLatentReason
     
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, dataset_name):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg):
         self.model_name = model
         self.epochs = epochs
-        self.dataset_name = dataset_name
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         #PROCESS DATA
+        #training data
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
@@ -240,7 +240,6 @@ if __name__ == '__main__':
             neg = args.neg,
             max_length = args.max_length,
             epochs = args.epochs, 
-            model = args.model, 
-            dataset_name = dataset
+            model = args.model
             )
     experiment.train_and_eval()
