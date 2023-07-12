@@ -35,9 +35,15 @@ class Experiment:
         #test addition
         self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
         self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
-        #test exponentiation
+        #test subtraction
         self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json"], neg = neg, training = False, test_size = 1.0)
         self.tokenized_test_dataset_sub = self.test_dataset_sub.map(self.tokenize_function, batched=False)
+        #test multiplication
+        self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json"], neg = neg, training = False, test_size = 1.0)
+        self.tokenized_test_dataset_mul = self.test_dataset_mul.map(self.tokenize_function, batched=False)        
+        #test division
+        self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json"], neg = neg, training = False, test_size = 1.0)
+        self.tokenized_test_dataset_div = self.test_dataset_div.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
@@ -46,14 +52,16 @@ class Experiment:
             "test_diff" : self.tokenized_test_dataset_diff, 
             "test_int" : self.tokenized_test_dataset_int,
             "test_add" : self.tokenized_test_dataset_add,
-            "test_sub" : self.tokenized_test_dataset_sub, 
+            "test_sub" : self.tokenized_test_dataset_sub,
+            "test_mul" : self.tokenized_test_dataset_mul,
+            "test_div" : self.tokenized_test_dataset_div,
             #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
             #"contrast_int" : self.tokenized_contrast_dataset_int
             }
         self.model = TransLatentReasoning(model, len(self.operations_voc.keys()), self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json"], neg = 1,  training = True, test_size = 0.2):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json", "data/multiplication.json", "data/division.json"], neg = 1,  training = True, test_size = 0.2):
         #load operation vocabulary
         if training:
             self.operations_voc = {}
@@ -106,9 +114,9 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        majority_class_preds = [1 for pred in logits]
-        majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
-        print("majority_class_baseline:", majority_baseline_score)
+        #majority_class_preds = [1 for pred in logits]
+        #majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
+        #print("majority_class_baseline:", majority_baseline_score)
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
@@ -147,8 +155,10 @@ class Experiment:
             return
         #build dataloaders
         eval_loaders = {}
+        eval_best_scores = {}
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True)
+            eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
         #START EVALUATION
         self.model.eval()
         print("EVALUATION")
@@ -185,11 +195,18 @@ class Experiment:
                     batch_index += 1
                 #if eval_steps > max_steps:
                 #    break
+            eval_metrics = self.compute_metrics([logits_metric, label_metric])
+            if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
+                #new best score
+                self.eval_best_scores[loader] = eval_metrics
+                #SAVE THE MODEL
+            #print results
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
             print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
-            print("metrics:", self.compute_metrics([logits_metric, label_metric]))
+            print("current scores:", eval_metrics)
+            print("best scores:", self.eval_best_scores[loader])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
