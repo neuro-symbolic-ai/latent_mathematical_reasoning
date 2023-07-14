@@ -12,7 +12,7 @@ from latent_reasoning.TranslationalReasoningTransformer import TransLatentReason
     
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None):
         self.model_name = model
         self.epochs = epochs
         self.learning_rate = learning_rate
@@ -23,43 +23,50 @@ class Experiment:
         self.train_dataset = self.process_dataset(neg = neg)
         self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
         #test differentiation
-        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
+        #self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
         #self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg,  training = False, test_size = 1.0)
         #self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
         #test integration
-        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
+        #self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
         #self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg,  training = False, test_size = 1.0)
         #self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
         #test addition
-        self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
+        #self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
         #test subtraction
-        self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_sub = self.test_dataset_sub.map(self.tokenize_function, batched=False)
+        #self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_sub = self.test_dataset_sub.map(self.tokenize_function, batched=False)
         #test multiplication
-        self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_mul = self.test_dataset_mul.map(self.tokenize_function, batched=False)        
+        #self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_mul = self.test_dataset_mul.map(self.tokenize_function, batched=False)        
         #test division
-        self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json"], neg = neg, training = False, test_size = 1.0)
-        self.tokenized_test_dataset_div = self.test_dataset_div.map(self.tokenize_function, batched=False)
+        #self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json"], neg = neg, training = False, test_size = 1.0)
+        #self.tokenized_test_dataset_div = self.test_dataset_div.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
             "dev_set": self.tokenized_train_datasets["test"],
-            "test_diff" : self.tokenized_test_dataset_diff, 
-            "test_int" : self.tokenized_test_dataset_int,
-            "test_add" : self.tokenized_test_dataset_add,
-            "test_sub" : self.tokenized_test_dataset_sub,
-            "test_mul" : self.tokenized_test_dataset_mul,
-            "test_div" : self.tokenized_test_dataset_div,
+            #"test_diff" : self.tokenized_test_dataset_diff, 
+            #"test_int" : self.tokenized_test_dataset_int,
+            #"test_add" : self.tokenized_test_dataset_add,
+            #"test_sub" : self.tokenized_test_dataset_sub,
+            #"test_mul" : self.tokenized_test_dataset_mul,
+            #"test_div" : self.tokenized_test_dataset_div,
             #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
             #"contrast_int" : self.tokenized_contrast_dataset_int
             }
-        self.model = TransLatentReasoning(model, len(self.operations_voc.keys()), self.device)
+        self.num_ops = len(self.operations_voc.keys())
+        if load_model_path is not None:
+            #load pretrained model
+            self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
+            self.model.load_state_dict(torch.load(load_model_path))
+        else:
+            #create a new model
+            self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
 
 
     def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json", "data/multiplication.json", "data/division.json"], neg = 1,  training = True, test_size = 0.2):
@@ -150,7 +157,7 @@ class Experiment:
             self.evaluation()
 
 
-    def evaluation(self, batch_size = 4):
+    def evaluation(self, batch_size = 4, save_best_model = True)
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -200,7 +207,10 @@ class Experiment:
             if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
                 #new best score
                 self.eval_best_scores[loader] = eval_metrics
-                #SAVE THE MODEL
+                #SAVE THE MODEL'S PARAMETERS
+                if save_best_model:
+                    PATH = "models/" + self.model_name + "_best_" + loader + "_" + self.num_ops + ".pt"
+                    torch.save(model.state_dict(), PATH)
             #print results
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
@@ -228,7 +238,6 @@ if __name__ == '__main__':
 
     args = parser.parse_args()
     dataset = args.dataset
-    #data_path = "data/"+dataset
     torch.backends.cudnn.deterministic = True 
     seed = 42
     np.random.seed(seed)
