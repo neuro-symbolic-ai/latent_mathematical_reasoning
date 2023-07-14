@@ -46,6 +46,7 @@ class Experiment:
         self.tokenized_test_dataset_div = self.test_dataset_div.map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
+        self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.eval_dict = {
             "dev_set": self.tokenized_train_datasets["test"],
@@ -155,10 +156,10 @@ class Experiment:
             return
         #build dataloaders
         eval_loaders = {}
-        eval_best_scores = {}
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True)
-            eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
+            if not dataset_name in self.eval_best_scores:
+                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
         #START EVALUATION
         self.model.eval()
         print("EVALUATION")
