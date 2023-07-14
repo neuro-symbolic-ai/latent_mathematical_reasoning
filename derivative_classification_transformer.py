@@ -153,11 +153,11 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.evaluation()
+                if steps % eval_steps_cycle == 0:
+                    self.evaluation()
 
 
-    def evaluation(self, batch_size = 4, save_best_model = True)
+    def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -209,8 +209,8 @@ class Experiment:
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
                 if save_best_model:
-                    PATH = "models/" + self.model_name + "_best_" + loader + "_" + self.num_ops + ".pt"
-                    torch.save(model.state_dict(), PATH)
+                    PATH = "models/" + self.model_name + "_best_" + loader + "_" + str(self.num_ops) + ".pt"
+                    torch.save(self.model.state_dict(), PATH)
             #print results
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
@@ -251,5 +251,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model
+            #load_model_path = "models/distilroberta-base_best_dev_set_6.pt"
             )
     experiment.train_and_eval()
+    #experiment.evaluation(save_best_model = False)
