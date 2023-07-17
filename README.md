@@ -31,3 +31,5 @@ Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICK
 - Deductive Additivity for Planning of Natural Language Proofs: https://github.com/Zayne-sprague/Deductive_Additivity_for_Planning_of_Natural_Language_Proofs
 - Grokking of Hierarchical Structure in Vanilla Transformers
 - Learning Neural PDE Solvers with Parameter-Guided Channel Attention
+- How neural networks extrapolate: From feedforward to graph neural networks
+- Teaching Arithmetic to Small Transformers
