@@ -18,47 +18,40 @@ class Experiment:
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.tokenizer = AutoTokenizer.from_pretrained(model)
+        self.eval_dict = {}
         #PROCESS DATA
         #training data
-        self.train_dataset = self.process_dataset(neg = neg)
-        self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
+        #self.train_dataset = self.process_dataset(neg = neg)
+        #self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
+        #self.eval_dict["dev_set"] = self.tokenized_train_datasets["test"]
         #test differentiation
-        #self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_diff = self.test_dataset_diff.map(self.tokenize_function, batched=False)
-        #self.contrast_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_easy_differentiation.json"], neg = neg,  training = False, test_size = 1.0)
-        #self.tokenized_contrast_dataset_diff = self.contrast_dataset_diff.map(self.tokenize_function, batched=False)
+        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json", "data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_differentiation_EQ_CONV", "data/EVAL_easy_differentiation.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_diff:
+            self.eval_dict[dataset_name] = self.test_dataset_diff[dataset_name].map(self.tokenize_function, batched=False)
         #test integration
-        #self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_int = self.test_dataset_int.map(self.tokenize_function, batched=False)
-        #self.contrast_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration_VAR_SWAP.json", "data/EVAL_easy_integration.json"], neg = neg,  training = False, test_size = 1.0)
-        #self.tokenized_contrast_dataset_int = self.contrast_dataset_int.map(self.tokenize_function, batched=False)
+        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json", "data/EVAL_integration_VAR_SWAP.json", "data/EVAL_integration_EQ_CONV", "data/EVAL_easy_integration.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_int:
+            self.eval_dict[dataset_name] = self.test_dataset_int[dataset_name].map(self.tokenize_function, batched=False)
         #test addition
-        #self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_add = self.test_dataset_add.map(self.tokenize_function, batched=False)
+        self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json", "data/EVAL_addition_VAR_SWAP.json", "data/EVAL_addition_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_add:
+            self.eval_dict[dataset_name] = self.test_dataset_add[dataset_name].map(self.tokenize_function, batched=False)
         #test subtraction
-        #self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_sub = self.test_dataset_sub.map(self.tokenize_function, batched=False)
+        self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json", "data/EVAL_subtraction_VAR_SWAP.json", "data/EVAL_subtraction_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_sub:
+            self.eval_dict[dataset_name] = self.test_dataset_sub[dataset_name].map(self.tokenize_function, batched=False)
         #test multiplication
-        #self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_mul = self.test_dataset_mul.map(self.tokenize_function, batched=False)        
+        self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json", "data/EVAL_multiplication_VAR_SWAP.json", "data/EVAL_multiplication_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_mul:
+            self.eval_dict[dataset_name] = self.test_dataset_mul[dataset_name].map(self.tokenize_function, batched=False)  
         #test division
-        #self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json"], neg = neg, training = False, test_size = 1.0)
-        #self.tokenized_test_dataset_div = self.test_dataset_div.map(self.tokenize_function, batched=False)
+        self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json", "data/EVAL_division_VAR_SWAP.json", "data/EVAL_division_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
+        for dataset_name in test_dataset_div:
+            self.eval_dict[dataset_name] = self.test_dataset_div[dataset_name].map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
-        self.eval_dict = {
-            "dev_set": self.tokenized_train_datasets["test"],
-            #"test_diff" : self.tokenized_test_dataset_diff, 
-            #"test_int" : self.tokenized_test_dataset_int,
-            #"test_add" : self.tokenized_test_dataset_add,
-            #"test_sub" : self.tokenized_test_dataset_sub,
-            #"test_mul" : self.tokenized_test_dataset_mul,
-            #"test_div" : self.tokenized_test_dataset_div,
-            #"contrast_diff" : self.tokenized_contrast_dataset_diff, 
-            #"contrast_int" : self.tokenized_contrast_dataset_int
-            }
         self.num_ops = len(self.operations_voc.keys())
         if load_model_path is not None:
             #load pretrained model
@@ -69,7 +62,7 @@ class Experiment:
             self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
 
 
-    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json", "data/multiplication.json", "data/division.json"], neg = 1,  training = True, test_size = 0.2):
+    def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json", "data/multiplication.json", "data/division.json"], neg = 1,  training = True, merge = True, test_size = 0.2):
         #load operation vocabulary
         if training:
             self.operations_voc = {}
@@ -78,7 +71,11 @@ class Experiment:
                 self.operations_voc[op_id] = path.split("/")[-1].replace(".json", "")
                 op_id += 1
         #convert dataset into json for dataset loader
-        formatted_examples = []
+        if merge:
+            formatted_examples = []
+        else:
+            formatted_examples = {}
+
         for path in dataset_path:
             #find operation id
             for entry in self.operations_voc:
@@ -90,10 +87,16 @@ class Experiment:
             # create an entry for each positive example
             for example in tqdm(d_json, desc="Loading Dataset"):
                 #LATEX
-                formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "operation": op_id, "label": 1.0})
-                #SIMPY
-                #formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
-                #create an entry for each negative example
+                if merge:
+                    formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "operation": op_id, "label": 1.0})
+                    #SIMPY
+                    #formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
+                    #create an entry for each negative example
+                else:
+                    if not path in formatted_examples:
+                        formatted_examples[path] = []
+                    formatted_examples[path].append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": example["positive"], "operation": op_id, "label": 1.0})
+
                 count_neg = 0
                 #LATEX
                 for negative in example["negatives"]:
@@ -102,17 +105,33 @@ class Experiment:
                     if count_neg == neg:
                         break
                     #LATEX
-                    formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": negative , "operation": op_id, 'label': -1.0})
+                    if merge:
+                        formatted_examples.append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": negative , "operation": op_id, 'label': -1.0})
                     #SIMPY
                     #formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
+                    else:
+                        if not path in formatted_examples:
+                            formatted_examples[path] = []
+                        formatted_examples[path].append({"equation1": example['premise_expression'], "equation2": example['variable'], "target": negative , "operation": op_id, 'label': -1.0})
                     count_neg += 1
-        print("Data examples", formatted_examples[:4])
-        #split randomly between train, dev, and test set
-        dataset = Dataset.from_list(formatted_examples)
-        if test_size == 1.0:
-            return dataset
-        dataset_split = dataset.train_test_split(test_size = test_size)
-        return dataset_split
+        if merge:
+            print("Data examples", formatted_examples[:4])
+            #split randomly between train, dev, and test set
+            dataset = Dataset.from_list(formatted_examples)
+            if test_size == 1.0:
+                return dataset
+            dataset_split = dataset.train_test_split(test_size = test_size)
+            return dataset_split
+        else:
+            datasets = {}
+            for path in in dataset_path:
+                print("Data examples", formatted_examples[path][:4])
+                #split randomly between train, dev, and test set
+                datasets[path] = Dataset.from_list(formatted_examples[path])
+                if test_size == 1.0:
+                    continue
+                datasets[path] = datasets[path].train_test_split(test_size = test_size)
+            return datasets
 
     def tokenize_function(self, examples):
         examples["equation1"] = self.tokenizer(examples["equation1"], padding="max_length", truncation=True, max_length = self.max_length)
@@ -251,7 +270,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model
-            #load_model_path = "models/distilroberta-base_best_dev_set_6.pt"
+            load_model_path = "models/distilroberta-base_best_dev_set_6.pt"
             )
-    experiment.train_and_eval()
-    #experiment.evaluation(save_best_model = False)
+    #experiment.train_and_eval()
+    experiment.evaluation(save_best_model = False)
