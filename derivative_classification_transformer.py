@@ -153,8 +153,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.evaluation()
+                #if steps % eval_steps_cycle == 0:
+            self.evaluation()
 
 
     def evaluation(self, batch_size = 4, save_best_model = True):
