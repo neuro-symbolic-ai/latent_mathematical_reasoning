@@ -8,7 +8,7 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.TranslationalReasoningGraph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE, GraphLatentReasoning_TransformerConv
 from latent_reasoning.data_model import DataModel
-from utils import match_parentheses, pad_collate
+from latent_reasoning.gnn_utils import match_parentheses, pad_collate
 import re
 
 class Experiment:
