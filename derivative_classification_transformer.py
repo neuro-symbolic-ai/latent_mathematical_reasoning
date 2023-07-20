@@ -12,54 +12,55 @@ from latent_reasoning.TranslationalReasoningTransformer import TransLatentReason
     
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None, do_train = True, do_test = False):
         self.model_name = model
         self.epochs = epochs
         self.learning_rate = learning_rate
         self.max_length = max_length
+        self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         self.eval_dict = {}
         #PROCESS DATA
-        #training data
-        #self.train_dataset = self.process_dataset(neg = neg)
-        #self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
-        #self.eval_dict["dev_set"] = self.tokenized_train_datasets["test"]
-        #test differentiation
-        self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json", "data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_differentiation_EQ_CONV", "data/EVAL_easy_differentiation.json"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_diff:
-            self.eval_dict[dataset_name] = self.test_dataset_diff[dataset_name].map(self.tokenize_function, batched=False)
-        #test integration
-        self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json", "data/EVAL_integration_VAR_SWAP.json", "data/EVAL_integration_EQ_CONV", "data/EVAL_easy_integration.json"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_int:
-            self.eval_dict[dataset_name] = self.test_dataset_int[dataset_name].map(self.tokenize_function, batched=False)
-        #test addition
-        self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json", "data/EVAL_addition_VAR_SWAP.json", "data/EVAL_addition_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_add:
-            self.eval_dict[dataset_name] = self.test_dataset_add[dataset_name].map(self.tokenize_function, batched=False)
-        #test subtraction
-        self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json", "data/EVAL_subtraction_VAR_SWAP.json", "data/EVAL_subtraction_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_sub:
-            self.eval_dict[dataset_name] = self.test_dataset_sub[dataset_name].map(self.tokenize_function, batched=False)
-        #test multiplication
-        self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json", "data/EVAL_multiplication_VAR_SWAP.json", "data/EVAL_multiplication_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_mul:
-            self.eval_dict[dataset_name] = self.test_dataset_mul[dataset_name].map(self.tokenize_function, batched=False)  
-        #test division
-        self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json", "data/EVAL_division_VAR_SWAP.json", "data/EVAL_division_EQ_CONV"], neg = neg, training = False, merge = False, test_size = 1.0)
-        for dataset_name in test_dataset_div:
-            self.eval_dict[dataset_name] = self.test_dataset_div[dataset_name].map(self.tokenize_function, batched=False)
+        #training data needs to be processed for operations and setup
+        self.train_dataset = self.process_dataset(neg = neg)
+        if do_train:
+            self.tokenized_train_datasets = self.train_dataset.map(self.tokenize_function, batched=False)
+            self.eval_dict["dev_set"] = self.tokenized_train_datasets["test"]
+        if do_test:
+            #test differentiation
+            self.test_dataset_diff = self.process_dataset(dataset_path = ["data/EVAL_differentiation.json", "data/EVAL_differentiation_VAR_SWAP.json", "data/EVAL_differentiation_EQ_CONV.json", "data/EVAL_easy_differentiation.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_diff:
+                self.eval_dict[dataset_name] = self.test_dataset_diff[dataset_name].map(self.tokenize_function, batched=False)
+            #test integration
+            self.test_dataset_int = self.process_dataset(dataset_path = ["data/EVAL_integration.json", "data/EVAL_integration_VAR_SWAP.json", "data/EVAL_integration_EQ_CONV.json", "data/EVAL_easy_integration.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_int:
+                self.eval_dict[dataset_name] = self.test_dataset_int[dataset_name].map(self.tokenize_function, batched=False)
+            #test addition
+            self.test_dataset_add = self.process_dataset(dataset_path = ["data/EVAL_addition.json", "data/EVAL_addition_VAR_SWAP.json", "data/EVAL_addition_EQ_CONV.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_add:
+                self.eval_dict[dataset_name] = self.test_dataset_add[dataset_name].map(self.tokenize_function, batched=False)
+            #test subtraction
+            self.test_dataset_sub = self.process_dataset(dataset_path = ["data/EVAL_subtraction.json", "data/EVAL_subtraction_VAR_SWAP.json", "data/EVAL_subtraction_EQ_CONV.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_sub:
+                self.eval_dict[dataset_name] = self.test_dataset_sub[dataset_name].map(self.tokenize_function, batched=False)
+            #test multiplication
+            self.test_dataset_mul = self.process_dataset(dataset_path = ["data/EVAL_multiplication.json", "data/EVAL_multiplication_VAR_SWAP.json", "data/EVAL_multiplication_EQ_CONV.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_mul:
+                self.eval_dict[dataset_name] = self.test_dataset_mul[dataset_name].map(self.tokenize_function, batched=False)  
+            #test division
+            self.test_dataset_div = self.process_dataset(dataset_path = ["data/EVAL_division.json", "data/EVAL_division_VAR_SWAP.json", "data/EVAL_division_EQ_CONV.json"], neg = neg, training = False, merge = False, test_size = 1.0)
+            for dataset_name in self.test_dataset_div:
+                self.eval_dict[dataset_name] = self.test_dataset_div[dataset_name].map(self.tokenize_function, batched=False)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
+        #create model
+        self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
         if load_model_path is not None:
             #load pretrained model
-            self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
             self.model.load_state_dict(torch.load(load_model_path))
-        else:
-            #create a new model
-            self.model = TransLatentReasoning(self.model_name, self.num_ops, self.device)
 
 
     def process_dataset(self, dataset_path = ["data/differentiation.json", "data/integration.json", "data/addition.json", "data/subtraction.json", "data/multiplication.json", "data/division.json"], neg = 1,  training = True, merge = True, test_size = 0.2):
@@ -124,7 +125,7 @@ class Experiment:
             return dataset_split
         else:
             datasets = {}
-            for path in in dataset_path:
+            for path in dataset_path:
                 print("Data examples", formatted_examples[path][:4])
                 #split randomly between train, dev, and test set
                 datasets[path] = Dataset.from_list(formatted_examples[path])
@@ -151,7 +152,7 @@ class Experiment:
         device = self.device
         self.model.to(device)
         
-        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=8, shuffle=True)
+        train_loader = DataLoader(self.tokenized_train_datasets["train"].with_format("torch"), batch_size=self.batch_size, shuffle=True)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
@@ -269,8 +270,10 @@ if __name__ == '__main__':
             neg = args.neg,
             max_length = args.max_length,
             epochs = args.epochs, 
-            model = args.model
-            load_model_path = "models/distilroberta-base_best_dev_set_6.pt"
+            model = args.model,
+            load_model_path = "models/distilbert-base-uncased_best_dev_set_6.pt",
+            do_training = False,
+            do_test = True
             )
     #experiment.train_and_eval()
     experiment.evaluation(save_best_model = False)
