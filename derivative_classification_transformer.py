@@ -7,7 +7,7 @@ import evaluate
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from data_utils import DatasetUtils
+from latent_reasoning.data_model import DataModel
 from latent_reasoning.TranslationalReasoningTransformer import TransLatentReasoning
     
 class Experiment:
@@ -20,8 +20,8 @@ class Experiment:
         self.batch_size = batch_size
         self.tokenizer = AutoTokenizer.from_pretrained(model)
         #LOAD DATA
-        self.data_model = DatasetUtils(do_train, do_test, self.tokenize_function)
-        self.train_dataset = self.data_model.train_dataset["train"]
+        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
+        self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
         #LOAD METRICS AND MODEL
@@ -173,7 +173,7 @@ if __name__ == '__main__':
             epochs = args.epochs, 
             model = args.model,
             load_model_path = "models/distilbert-base-uncased_best_dev_set_6.pt",
-            do_training = False,
+            do_train = False,
             do_test = True
             )
     #experiment.train_and_eval()

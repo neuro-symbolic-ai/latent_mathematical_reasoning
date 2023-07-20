@@ -7,6 +7,7 @@ import evaluate
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.TranslationalReasoningGraph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE, GraphLatentReasoning_TransformerConv
+from latent_reasoning.data_model import DataModel
 from utils import match_parentheses, pad_collate
 import re
 
@@ -24,8 +25,8 @@ class Experiment:
         self.cons_list_sin = cons_list_sin # operation within equation
         self.cons_list_dou = cons_list_dou # operation within equation
         #LOAD DATA
-        self.data_model = DatasetUtils(do_train, do_test, self.tokenize_function, srepr = True)
-        self.train_dataset = self.data_model.train_dataset["train"]
+        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function, srepr = True)
+        self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
         #LOAD METRICS AND MODEL
@@ -137,7 +138,7 @@ class Experiment:
                 #if steps % eval_steps_cycle == 0:
             self.evaluation()
 
-def evaluation(self, batch_size = 4, save_best_model = True):
+    def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -228,6 +229,8 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
+            #do_train = False,
+            #do_test = True,
             #load_model_path = "models/gat_best_dev_set_6.pt"
             )
     experiment.train_and_eval()

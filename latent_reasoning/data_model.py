@@ -2,9 +2,9 @@ import json
 from tqdm import tqdm
 from datasets import Dataset
     
-class DatasetUtils:
+class DataModel:
 
-    def __init__(self, do_train = True, do_test = False, tokenize_function = None, srepr = False):
+    def __init__(self, neg = 1, do_train = True, do_test = False, tokenize_function = None, srepr = False):
         #PROCESS DATA
         self.tokenize_function = tokenize_function
         #training data needs to be processed for operations and setup
@@ -68,7 +68,7 @@ class DatasetUtils:
             d_file = open(path, 'r')
             d_json = json.load(d_file)
             # create an entry for each positive example
-            for example in tqdm(d_json, desc="Loading Dataset"):
+            for example in tqdm(d_json, desc= path):
                 if merge:
                     #LATEX
                     if not srepr:
@@ -112,7 +112,6 @@ class DatasetUtils:
                             formatted_examples[path].append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": -1.0})
                         count_neg += 1
         if merge:
-            print("Data examples", formatted_examples[:4])
             #split randomly between train, dev, and test set
             dataset = Dataset.from_list(formatted_examples)
             if test_size == 1.0:
@@ -121,8 +120,7 @@ class DatasetUtils:
             return dataset_split
         else:
             datasets = {}
-            for path in in dataset_path:
-                print("Data examples", formatted_examples[path][:4])
+            for path in dataset_path:
                 #split randomly between train, dev, and test set
                 datasets[path] = Dataset.from_list(formatted_examples[path])
                 if test_size == 1.0:
