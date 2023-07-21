@@ -33,3 +33,4 @@ Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICK
 - Learning Neural PDE Solvers with Parameter-Guided Channel Attention
 - How neural networks extrapolate: From feedforward to graph neural networks
 - Teaching Arithmetic to Small Transformers
+- Reasoning or Reciting? Exploring the Capabilities and Limitations of Language Models Through Counterfactual Tasks
