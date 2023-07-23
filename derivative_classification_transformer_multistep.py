@@ -11,7 +11,7 @@ from latent_reasoning.TranslationalReasoningTransformer import TransLatentReason
     
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None, do_train = True, do_test = False):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None):
         self.model_name = model
         self.epochs = epochs
         self.learning_rate = learning_rate
@@ -141,8 +141,5 @@ if __name__ == '__main__':
             epochs = args.epochs, 
             model = args.model,
             load_model_path = "models/distilbert-base-uncased_best_dev_set_6.pt",
-            do_train = False,
-            do_test = True
             )
-    #experiment.train_and_eval()
-    experiment.evaluation(save_best_model = False)
+    experiment.evaluation()
