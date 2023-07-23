@@ -127,3 +127,68 @@ class DataModel:
                     continue
                 datasets[path] = datasets[path].train_test_split(test_size = test_size)
             return datasets
+
+
+
+
+
+
+class DataModelMultiStep:
+
+    def __init__(self, neg = 1, tokenize_function = None, srepr = False):
+        #PROCESS DATA
+        self.tokenize_function = tokenize_function
+        #training data needs to be processed for operations and setup
+        #MAKE OPERATIONS VOCABULARY DYNAMIC 
+        #self.operations_voc = DataModel(do_train = False, do_test = False).operations_voc
+        self.operations_voc = { "differentiate":0,
+                                "integrate":1,
+                                "add":2,
+                                "minus":3,
+                                "times":4,
+                                "divide":5,
+                                }
+        self.eval_dict = {}
+        self.test_dataset_multi_step = self.process_dataset()
+        for step in self.test_dataset_multi_step:
+            self.eval_dict[step] = self.test_dataset_div[step].map(self.tokenize_function, batched=False)
+
+    def process_dataset(self, dataset_path = "data/multiple_steps.json", neg = 1, srepr = False):
+        #convert dataset into json for dataset loader
+        d_file = open(path, 'r')
+        d_json = json.load(d_file)
+        # create an entry for each positive example
+        formatted_examples = {}
+        for example in tqdm(d_json, desc= path):
+            step_count = 0
+            for step in example["steps"]
+                 if not step_count in formatted_examples:
+                    formatted_examples[step_count] = []
+                #LATEX
+                if not srepr:
+                    formatted_examples[step_count].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": 1.0})
+                #SIMPY
+                #else:
+                #    formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
+                #NEGATIVE EXAMPLES
+                count_neg = 0
+                #LATEX
+                if not srepr:
+                    for negative in example["negatives"]:
+                        if count_neg == neg:
+                            break
+                        formatted_examples[step_count].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": -1.0})
+                        count_neg += 1
+                idx += 1
+                #SIMPY
+                #else:
+                #    for negative in example["srepr_negatives"]:
+                #        if count_neg == neg:
+                #            break
+                #        formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
+                #        count_neg += 1
+
+        datasets = {}
+        for step in formatted_examples:
+            datasets[step] = Dataset.from_list(formatted_examples[step])
+        return datasets
