@@ -55,7 +55,7 @@ class TransLatentReasoning(nn.Module):
         return loss, scores, labels, embeddings_output
 
 
-    def inference_step(self, equation1, equation2, target_equation, operation, labels):
+    def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
         Wo = self.Wo[operation]
         ov = self.ov.weight[operation]
@@ -63,18 +63,18 @@ class TransLatentReasoning(nn.Module):
         # ENCODE EQUATIONS
         if equation1 != None:
             equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-            embeddings_eq1 = self.encoder(**eq1)
+            embeddings_eq1 = self.encoder(**equation1)
             embeddings_eq1 = self.mean_pooling(embeddings_eq1, equation1['attention_mask'])
         else:
-            embeddings_eq1 = self.embeddings_pred
+            embeddings_eq1 = prev_step
         
         equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        embeddings_eq2 = self.encoder(**eq2)
+        embeddings_eq2 = self.encoder(**equation2)
         embeddings_eq2 = self.mean_pooling(embeddings_eq2, equation2['attention_mask'])
 
-        target_eq = {k: v.to(self.device) for k, v in target_equation[step].items()} 
-        embeddings_target = self.encoder(**target_eq)
-        embeddings_target = self.mean_pooling(embeddings_target, target_eq['attention_mask'])
+        target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
+        embeddings_target = self.encoder(**target_equation)
+        embeddings_target = self.mean_pooling(embeddings_target, target_equation['attention_mask'])
 
         features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
         embeddings_output = self.linear(features)
@@ -83,12 +83,12 @@ class TransLatentReasoning(nn.Module):
         embeddings_output = embeddings_output * Wo
         embeddings_target = embeddings_target + ov
         #save current predictions
-        self.embeddings_pred = embeddings_output - ov
+        #self.embeddings_pred = embeddings_output - ov
 
         #COMPUTE SCORES
         scores = self.similarity_fct(embeddings_output, embeddings_target)
 
-        return scores, self.embeddings_pred
+        return scores, embeddings_output - ov
 
 
     #Mean Pooling - Take attention mask into account for correct averaging

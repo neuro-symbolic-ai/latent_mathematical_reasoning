@@ -150,23 +150,32 @@ class DataModelMultiStep:
                                 }
         self.eval_dict = {}
         self.test_dataset_multi_step = self.process_dataset()
-        for step in self.test_dataset_multi_step:
-            self.eval_dict[step] = self.test_dataset_div[step].map(self.tokenize_function, batched=False)
+        self.eval_dict["multi_step"] = self.test_dataset_multi_step.map(self.tokenize_function, batched = False)
 
     def process_dataset(self, dataset_path = "data/multiple_steps.json", neg = 1, srepr = False):
         #convert dataset into json for dataset loader
-        d_file = open(path, 'r')
+        d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
         # create an entry for each positive example
-        formatted_examples = {}
-        for example in tqdm(d_json, desc= path):
+        tot_formatted_examples = []
+        example_id = 0
+        for example in tqdm(d_json, desc= dataset_path):
+            #NEED TO FIX THE DATASET GENERATION
+            #if len(example["steps"]) < 6:
+            #    print(example["steps"])
+            #    continue
             step_count = 0
-            for step in example["steps"]
-                 if not step_count in formatted_examples:
-                    formatted_examples[step_count] = []
+            formatted_example = {}
+            formatted_example["idx"] = example_id
+            formatted_example["steps"] = {}
+            for step in example["steps"]:
+                if len(step["negatives"]) == 0:
+                    continue
+                if not str(step_count) in formatted_example["steps"]:
+                    formatted_example["steps"][str(step_count)] = []
                 #LATEX
                 if not srepr:
-                    formatted_examples[step_count].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": 1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": 1.0})
                 #SIMPY
                 #else:
                 #    formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
@@ -174,12 +183,15 @@ class DataModelMultiStep:
                 count_neg = 0
                 #LATEX
                 if not srepr:
-                    for negative in example["negatives"]:
+                    #if len(step["negatives"]) > 0:
+                        #print(step["negatives"])
+                    #print(len(step["negatives"]))
+                    for negative in step["negatives"]:
                         if count_neg == neg:
                             break
-                        formatted_examples[step_count].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": -1.0})
+                        formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": negative, "operation": self.operations_voc[step["operation_name"]], "label": -1.0})
                         count_neg += 1
-                idx += 1
+                step_count += 1
                 #SIMPY
                 #else:
                 #    for negative in example["srepr_negatives"]:
@@ -187,8 +199,9 @@ class DataModelMultiStep:
                 #            break
                 #        formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
                 #        count_neg += 1
+            tot_formatted_examples.append(formatted_example)
 
-        datasets = {}
-        for step in formatted_examples:
-            datasets[step] = Dataset.from_list(formatted_examples[step])
-        return datasets
+        #datasets = {}
+        #for step in formatted_examples:
+        dataset = Dataset.from_list(tot_formatted_examples)
+        return dataset
