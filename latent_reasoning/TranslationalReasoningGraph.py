@@ -48,8 +48,8 @@ class GraphLatentReasoning_GAT(nn.Module):
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # Tokenize sentences
         #encoded_input = tokenizer(sentences, padding=True, truncation=True, return_tensors='pt')
-        Wo = self.Wo[operation-1]
-        ov = self.ov.weight[operation-1]
+        Wo = self.Wo[operation]
+        ov = self.ov.weight[operation]
         # Compute embeddings
         # equation1 = {k: v.to(self.device) for k, v in equation1.items()}
         edge_emb_eq1 = self.generate_edge_emb(equation1["node_list"]).to(self.device)
@@ -126,8 +126,8 @@ class GraphLatentReasoning_GCN(nn.Module):
 
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # Operation 
-        Wo = self.Wo[operation-1]
-        ov = self.ov.weight[operation-1]
+        Wo = self.Wo[operation]
+        ov = self.ov.weight[operation]
         # Compute embeddings
         edge_emb_eq1 = self.generate_edge_emb(equation1["node_list"]).to(self.device)
         for l in range(self.num_layers):
@@ -193,8 +193,8 @@ class GraphLatentReasoning_GraphSAGE(nn.Module):
 
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # Operation 
-        Wo = self.Wo[operation-1]
-        ov = self.ov.weight[operation-1]
+        Wo = self.Wo[operation]
+        ov = self.ov.weight[operation]
         # Compute embeddings
         edge_emb_eq1 = self.generate_edge_emb(equation1["node_list"]).to(self.device)
 
@@ -261,8 +261,8 @@ class GraphLatentReasoning_TransformerConv(nn.Module):
 
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # Operation 
-        Wo = self.Wo[operation-1]
-        ov = self.ov.weight[operation-1]
+        Wo = self.Wo[operation]
+        ov = self.ov.weight[operation]
         # Compute embeddings
         edge_emb_eq1 = self.generate_edge_emb(equation1["node_list"]).to(self.device)
         for l in range(self.num_layers):
