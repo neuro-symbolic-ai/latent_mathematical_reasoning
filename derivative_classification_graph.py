@@ -94,10 +94,6 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        #predictions = np.argmax(logits, axis=-1)
-        #majority_class_preds = [1 for pred in logits]
-        #majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
-        #print("majority_class_baseline:", majority_baseline_score)
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 

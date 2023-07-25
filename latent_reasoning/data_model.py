@@ -146,7 +146,7 @@ class DataModelMultiStep:
                                 "divide":5,
                                 }
         self.eval_dict = {}
-        self.test_dataset_multi_step = self.process_dataset()
+        self.test_dataset_multi_step = self.process_dataset(srepr)
         self.eval_dict["multi_step"] = self.test_dataset_multi_step.map(self.tokenize_function, batched = False)
 
     def process_dataset(self, dataset_path = "data/multiple_steps.json", neg = 1, srepr = False):
@@ -174,31 +174,26 @@ class DataModelMultiStep:
                 if not srepr:
                     formatted_example["steps"][str(step_count)].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc[step["operation_name"]], "label": 1.0})
                 #SIMPY
-                #else:
-                #    formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": 1.0})
+                else:
+                    formatted_examples["steps"][str(step_count)].append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": self.operations_voc[step["operation_name"]], "label": 1.0})
                 #NEGATIVE EXAMPLES
                 count_neg = 0
                 #LATEX
                 if not srepr:
-                    #if len(step["negatives"]) > 0:
-                        #print(step["negatives"])
-                    #print(len(step["negatives"]))
                     for negative in step["negatives"]:
                         if count_neg == neg:
                             break
                         formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": negative, "operation": self.operations_voc[step["operation_name"]], "label": -1.0})
                         count_neg += 1
-                step_count += 1
                 #SIMPY
-                #else:
-                #    for negative in example["srepr_negatives"]:
-                #        if count_neg == neg:
-                #            break
-                #        formatted_examples.append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
-                #        count_neg += 1
+                else:
+                    for negative in example["srepr_negatives"]:
+                        if count_neg == neg:
+                            break
+                        formatted_examples["steps"][str(step_count)].append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": self.operations_voc[step["operation_name"]], "label": -1.0})
+                        count_neg += 1
+                step_count += 1
             tot_formatted_examples.append(formatted_example)
 
-        #datasets = {}
-        #for step in formatted_examples:
         dataset = Dataset.from_list(tot_formatted_examples)
         return dataset
