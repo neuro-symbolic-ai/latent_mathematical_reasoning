@@ -8,16 +8,20 @@ from torch.utils.data import DataLoader
 from latent_reasoning.TranslationalReasoningGraph import GraphLatentReasoning_GAT, GraphLatentReasoning_GCN, GraphLatentReasoning_GraphSAGE, GraphLatentReasoning_TransformerConv
 from latent_reasoning.data_model import DataModelMultiStep
 from latent_reasoning.gnn_utils import match_parentheses, pad_collate
+import re
 
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None, input_dim = 768, cons_list_sin = ['log', 'exp', 'cos', 'Integer', 'sin', 'Symbol'], cons_list_dou = ['Mul', 'Add', 'Pow']):
         self.model_name = model
         self.epochs = epochs
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.batch_size = batch_size
         self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
+        self.input_dim = input_dim
+        self.cons_list_sin = cons_list_sin # operation within equation
+        self.cons_list_dou = cons_list_dou # operation within equation
         #LOAD DATA
         self.data_model = DataModelMultiStep(neg, self.tokenize_function, srepr = True)
         self.eval_dict = self.data_model.eval_dict
