@@ -8,7 +8,7 @@ class DataModel:
         #PROCESS DATA
         self.tokenize_function = tokenize_function
         #training data needs to be processed for operations and setup
-        self.train_dataset = self.process_dataset(neg = neg)
+        self.train_dataset = self.process_dataset(neg = neg, srepr = srepr)
         self.eval_dict = {}
         if do_train:
             self.tokenized_train_dataset = self.train_dataset.map(self.tokenize_function, batched=False)
@@ -109,7 +109,7 @@ class DataModel:
                         else:
                             if not path in formatted_examples:
                                 formatted_examples[path] = []
-                            formatted_examples[path].append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": example["srepr_positive"], "operation": op_id, "label": -1.0})
+                            formatted_examples[path].append({"equation1": example["srepr_premise_expression"], "equation2": example["srepr_variable"], "target": negative, "operation": op_id, "label": -1.0})
                         count_neg += 1
         if merge:
             #split randomly between train, dev, and test set
@@ -127,9 +127,6 @@ class DataModel:
                     continue
                 datasets[path] = datasets[path].train_test_split(test_size = test_size)
             return datasets
-
-
-
 
 
 

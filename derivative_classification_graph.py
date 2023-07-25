@@ -36,13 +36,13 @@ class Experiment:
         self.num_ops = len(self.operations_voc.keys())
         #create a new model
         if self.model_name == 'gat':
-            self.model = GraphLatentReasoning_GAT(self.model_name, self.num_ops, self.device)
+            self.model = GraphLatentReasoning_GAT(self.model_name, self.num_ops, self.device, feat_drop = 0.0, heads = 8, num_layers = 4)
         elif self.model_name == 'gcn':
-            self.model = GraphLatentReasoning_GCN(self.model_name, self.num_ops, self.device)
+            self.model = GraphLatentReasoning_GCN(self.model_name, self.num_ops, self.device, feat_drop = 0.0, heads = 8, num_layers = 4)
         elif self.model_name == 'graphsage':
-            self.model = GraphLatentReasoning_GraphSAGE(self.model_name, self.num_ops, self.device)
+            self.model = GraphLatentReasoning_GraphSAGE(self.model_name, self.num_ops, self.device, feat_drop = 0.0, heads = 8, num_layers = 4)
         elif self.model_name == 'graphtrans':
-            self.model = GraphLatentReasoning_TransformerConv(self.model_name, self.num_ops, self.device)
+            self.model = GraphLatentReasoning_TransformerConv(self.model_name, self.num_ops, self.device, feat_drop = 0.0, heads = 8, num_layers = 4)
         else:
             print("Wrong Model")
             exit(0)
@@ -53,29 +53,23 @@ class Experiment:
 
     def construct_graph(self, examples, var):
         device = self.device
-
         node_list = []
         edge_index = [[], []]
-
         node_list = match_parentheses(examples)
         try:
             var_idx = node_list.index(match_parentheses(var)[-1])
         except:
             var_idx = -1
-
         idx = 0
         idx_flag = 0
         for symbol in node_list[: -1]:
             if symbol in self.cons_list_sin:
                 edge_index[0].append(idx)
                 edge_index[1].append(idx+1)
-
                 idx = idx + 1
-                
             elif symbol in self.cons_list_dou:
                 edge_index[0].append(idx)
                 edge_index[1].append(idx+1)
-
                 idx_flag = idx
                 idx = idx + 1
             else:
@@ -101,9 +95,9 @@ class Experiment:
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
         #predictions = np.argmax(logits, axis=-1)
-        majority_class_preds = [1 for pred in logits]
-        majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
-        print("majority_class_baseline:", majority_baseline_score)
+        #majority_class_preds = [1 for pred in logits]
+        #majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
+        #print("majority_class_baseline:", majority_baseline_score)
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
@@ -116,7 +110,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 2000
+        eval_steps_cycle = 100
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -135,8 +129,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.evaluation()
+                if steps % eval_steps_cycle == 0:
+                    self.evaluation()
 
     def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
@@ -145,7 +139,7 @@ class Experiment:
         #build dataloaders
         eval_loaders = {}
         for dataset_name in self.eval_dict:
-            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True, collate_fn=pad_collate)
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False, collate_fn=pad_collate)
             if not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
         #START EVALUATION
@@ -159,7 +153,6 @@ class Experiment:
             logits_metric = []
             label_metric = []
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
-                eval_steps += 1
                 for idx in range(len(eval_batch)):
                     equation1 = eval_batch[idx]["equation1"]
                     equation2 = eval_batch[idx]["equation2"]
@@ -179,6 +172,9 @@ class Experiment:
                     else:
                         scores_neg.append(outputs[1].detach().cpu().numpy())
                         label_metric.append(0)
+                if eval_steps > max_steps:
+                    break
+                eval_steps += 1
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
                 #new best score
