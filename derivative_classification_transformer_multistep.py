@@ -52,7 +52,7 @@ class Experiment:
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
-    def evaluation(self, batch_size = 1):
+    def evaluation(self, batch_size = 4):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -102,8 +102,8 @@ class Experiment:
                             outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
                         inference_state[item_index] = outputs[1]
                         item_index += 1
-                        for score in outputs[0]:
-                            if score > 0.0: #== torch.max(outputs[0]):
+                        for score in torch.sign(outputs[0]):
+                            if score >= 0.0: #== torch.max(outputs[0]):
                                 logits_metric[inference_step].append(1)
                             else:
                                 logits_metric[inference_step].append(0)

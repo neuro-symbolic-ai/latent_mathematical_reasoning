@@ -17,7 +17,7 @@ class Experiment:
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.batch_size = batch_size
-        self.tokenizer = AutoTokenizer.from_pretrained(model)
+        self.device = torch.device("cuda") if torch.cuda.is_available() else torch.device("cpu")
         #LOAD DATA
         self.data_model = DataModelMultiStep(neg, self.tokenize_function, srepr = True)
         self.eval_dict = self.data_model.eval_dict
@@ -25,7 +25,6 @@ class Experiment:
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         #self.eval_best_scores = {}
-        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
         #create model
         if self.model_name == 'gat':
@@ -79,8 +78,8 @@ class Experiment:
                 examples["steps"][step] = []
                 continue
             for instance in examples["steps"][step]:
-                instance["equation1"] = self.construct_graph(examples["equation1"],examples["equation2"])
-                instance["target"] = self.construct_graph(examples["target"], examples["equation2"])
+                instance["equation1"] = self.construct_graph(instance["equation1"],instance["equation2"])
+                instance["target"] = self.construct_graph(instance["target"], instance["equation2"])
         return examples
 
     def compute_metrics(self, eval_pred):

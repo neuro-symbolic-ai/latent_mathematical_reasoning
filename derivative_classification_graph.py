@@ -125,8 +125,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.evaluation()
+                #if steps % eval_steps_cycle == 0:
+            self.evaluation()
 
     def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
@@ -168,8 +168,8 @@ class Experiment:
                     else:
                         scores_neg.append(outputs[1].detach().cpu().numpy())
                         label_metric.append(0)
-                if eval_steps > max_steps:
-                    break
+                #if eval_steps > max_steps:
+                #    break
                 eval_steps += 1
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:

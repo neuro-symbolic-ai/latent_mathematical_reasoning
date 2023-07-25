@@ -78,14 +78,14 @@ class Experiment:
             self.evaluation()
 
 
-    def evaluation(self, batch_size = 4, save_best_model = True):
+    def evaluation(self, batch_size = 2, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
         #build dataloaders
         eval_loaders = {}
         for dataset_name in self.eval_dict:
-            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=True)
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
         #START EVALUATION
@@ -108,19 +108,21 @@ class Experiment:
                 outputs = self.model(equation1, equation2, target, operation, labels)
                 batch_index = 0
                 for score in outputs[1]:
-                    if score > 0.0:
+                    if score == torch.max(outputs[1]):
                         logits_metric.append(1)
                     else:
                         logits_metric.append(0)
                     batch_index += 1
                 batch_index = 0
+                label_index = 0
                 for label in labels:
                     if label == 1.0:
-                        scores_pos.append(outputs[1].detach().cpu().numpy())
+                        scores_pos.append(outputs[1].detach().cpu().numpy()[label_index])
                         label_metric.append(1)
                     else:
-                        scores_neg.append(outputs[1].detach().cpu().numpy())
+                        scores_neg.append(outputs[1].detach().cpu().numpy()[label_index])
                         label_metric.append(0)
+                    label_index += 1
                     batch_index += 1
                 #if eval_steps > max_steps:
                 #    break
