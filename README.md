@@ -34,3 +34,4 @@ Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICK
 - How neural networks extrapolate: From feedforward to graph neural networks
 - Teaching Arithmetic to Small Transformers
 - Reasoning or Reciting? Exploring the Capabilities and Limitations of Language Models Through Counterfactual Tasks
+- Generalization on the unseen, logic reasoning and degree curriculum
