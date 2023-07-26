@@ -72,7 +72,7 @@ class Experiment:
             logits_metric = {}
             label_metric = {}
             batch_index = 0
-            max_batch = 3000
+            max_batch = 200
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
                 for inference_step in eval_batch["steps"]:
@@ -84,36 +84,30 @@ class Experiment:
                         logits_metric[inference_step] = []
                     if not inference_step in label_metric:
                         label_metric[inference_step] = []
-                    item_index = 0
-                    equation1 = []
-                    equation2 = []
-                    target = []
-                    labels = []
-                    operation = []
                     for item in eval_batch["steps"][inference_step]:
                         equation1 = item["equation1"]
                         equation2 = item["equation2"]
                         target = item["target"]
                         labels = item["label"]
                         operation = item['operation']
-                        if inference_step == "0":
-                            outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
-                        else:
-                            outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
-                        inference_state[item_index] = outputs[1]
-                        item_index += 1
-                        for score in torch.sign(outputs[0]):
-                            if score >= 0.0: #== torch.max(outputs[0]):
+                        outputs = self.model(equation1, equation2, target, operation, labels)
+                        #if inference_step == "0":
+                        #    outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
+                        #else:
+                        #    outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
+                        #inference_state[item_index] = outputs[1]
+                        for score in outputs[1]:
+                            if score > 0.0: #== torch.max(outputs[0]):
                                 logits_metric[inference_step].append(1)
                             else:
                                 logits_metric[inference_step].append(0)
                         label_index = 0
                         for label in labels:
                             if label == 1.0:
-                                scores_pos[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
+                                scores_pos[inference_step].append(outputs[1].detach().cpu().numpy()[label_index])
                                 label_metric[inference_step].append(1)
                             else:
-                                scores_neg[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
+                                scores_neg[inference_step].append(outputs[1].detach().cpu().numpy()[label_index])
                                 label_metric[inference_step].append(0)
                             label_index += 1
                 if batch_index > max_batch:
@@ -167,6 +161,6 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            load_model_path = "models/distilroberta-base_best_dev_set_6.pt",
+            load_model_path = "models/distilbert-base-uncased_best_dev_set_6.pt",
             )
     experiment.evaluation()

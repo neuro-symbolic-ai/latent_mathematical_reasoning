@@ -91,7 +91,7 @@ class Experiment:
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
-    def evaluation(self, batch_size = 1):
+    def evaluation(self, batch_size = 4):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -109,48 +109,42 @@ class Experiment:
             logits_metric = {}
             label_metric = {}
             batch_index = 0
-            max_batch = 3000
+            max_batch = 200
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
-                for inference_step in eval_batch["steps"]:
-                    if not inference_step in scores_pos:
-                        scores_pos[inference_step] = []
-                    if not inference_step in scores_neg:
-                        scores_neg[inference_step] = []
-                    if not inference_step in logits_metric:
-                        logits_metric[inference_step] = []
-                    if not inference_step in label_metric:
-                        label_metric[inference_step] = []
-                    item_index = 0
-                    equation1 = []
-                    equation2 = []
-                    target = []
-                    labels = []
-                    operation = []
-                    for item in eval_batch["steps"][inference_step]:
-                        for idx in range(len(item)):
-                            equation1 = item[idx]["equation1"]
-                            equation2 = item[idx]["equation2"]
-                            target = item[idx]["target"]
-                            label = item[idx]["label"]
-                            operation = item[idx]['operation']
-                            if inference_step == "0":
-                                outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
-                            else:
-                                outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
-                            inference_state[item_index] = outputs[1]
-                            item_index += 1
-                            for score in outputs[0]:
+                for idx in range(len(eval_batch)):
+                    for inference_step in eval_batch[idx]["steps"]:
+                        if not inference_step in scores_pos:
+                            scores_pos[inference_step] = []
+                        if not inference_step in scores_neg:
+                            scores_neg[inference_step] = []
+                        if not inference_step in logits_metric:
+                            logits_metric[inference_step] = []
+                        if not inference_step in label_metric:
+                            label_metric[inference_step] = []
+                        for item in eval_batch[idx]["steps"][inference_step]:
+                            equation1 = item["equation1"]
+                            equation2 = item["equation2"]
+                            target = item["target"]
+                            label = item["label"]
+                            operation = item['operation']
+                            outputs = self.model(equation1, equation2, target, operation, label)
+                            #if inference_step == "0":
+                            #    outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
+                            #else:
+                            #    outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
+                            #inference_state[item_index] = outputs[1]
+                            for score in outputs[1]:
                                 if score > 0.0:
                                     logits_metric[inference_step].append(1)
                                 else:
                                     logits_metric[inference_step].append(0)
                             if label == 1.0:
-                                scores_pos.append(outputs[1].detach().cpu().numpy())
-                                label_metric.append(1)
+                                scores_pos[inference_step].append(outputs[1].detach().cpu().numpy())
+                                label_metric[inference_step].append(1)
                             else:
-                                scores_neg.append(outputs[1].detach().cpu().numpy())
-                                label_metric.append(0)
+                                scores_neg[inference_step].append(outputs[1].detach().cpu().numpy())
+                                label_metric[inference_step].append(0)
                 if batch_index > max_batch:
                     break
                 batch_index += 1
@@ -174,7 +168,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
                     help="Which dataset to use")
-    parser.add_argument("--model", type=str, default="distilbert-base-uncased", nargs="?",
+    parser.add_argument("--model", type=str, default="gat", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=8, nargs="?",
                     help="Batch size.")
@@ -202,6 +196,6 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            load_model_path = "models/gat_best_dev_set_6.pt",
+            load_model_path = "models/graphsage_best_dev_set_6.pt",
             )
     experiment.evaluation()
