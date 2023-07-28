@@ -4,6 +4,8 @@ Data: https://drive.google.com/drive/folders/1M8XQOuzIL0GgRQjcnmtffUTX7qhWYuFk?u
 
 Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICKJcdZEIYqyTys/edit?usp=sharing 
 
+Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv 
+
 ## Related Work
 - Mthematical Reasoning in Latent Space
 - Symbolic Brittleness in Sequence Models: on Systematic Generalization in Symbolic Mathematics
