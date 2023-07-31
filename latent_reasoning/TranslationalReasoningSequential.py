@@ -3,16 +3,17 @@ import torch
 from torch import nn
 import numpy as np
 import math
+from torch.autograd import Variable
 
 class TransLatentReasoningSeq(nn.Module):
-    def __init__(self, model_type = "RNN", n_tokens, n_operations, device):
+    def __init__(self, n_tokens, n_operations, device, model_type = "RNN"):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
         # Load encoder model
         if model_type == "TRANSFORMER":
             self.encoder = TransformerModel(n_tokens).to(device)
         elif model_type == "RNN":
-            self.encoder = RNNModel(n_tokens).to(device)
+            self.encoder = RNNModel(n_tokens, device).to(device)
         self.dim = self.encoder.ninp
         #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
@@ -93,13 +94,15 @@ class TransLatentReasoningSeq(nn.Module):
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
-    def __init__(self, ntoken, rnn_type = "LSTM" ninp = 300, nhid = 300, nlayers = 3, dropout=0.5):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 768, nhid = 768, nlayers = 3, dropout=0.5):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
+        self.ninp = ninp
+        self.device = device
         self.encoder = nn.Embedding(ntoken, ninp)
         if rnn_type in ['LSTM', 'GRU']:
-            self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout)
+            self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout, batch_first = True)
         else:
             try:
                 nonlinearity = {'RNN_TANH': 'tanh', 'RNN_RELU': 'relu'}[rnn_type]
@@ -118,11 +121,13 @@ class RNNModel(nn.Module):
         initrange = 0.1
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
-    def forward(self, input, hidden):
+    def forward(self, input):
+        #h_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
+        #c_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
         emb = self.drop(self.encoder(input["input_ids"]))
-        output, hidden = self.rnn(emb, hidden)
-        output = self.drop(output)
-        return output
+        output, hidden = self.rnn(emb)
+        #output = self.drop(hidden[0][-1])
+        return hidden[0][-1]
 
     def init_hidden(self, bsz):
         weight = next(self.parameters())
