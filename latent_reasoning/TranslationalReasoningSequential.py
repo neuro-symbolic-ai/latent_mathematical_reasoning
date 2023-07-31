@@ -124,6 +124,9 @@ class RNNModel(nn.Module):
     def forward(self, input):
         #h_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
         #c_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
+        input_mask = torch.clamp(input["attention_mask"].sum(1))
+        print(input_mask.size())
+        pack = nn.utils.rnn.pack_padded_sequence(input['input_ids'], input_mask, batch_first=True)
         emb = self.drop(self.encoder(input["input_ids"]))
         output, hidden = self.rnn(emb)
         #output = self.drop(hidden[0][-1])
