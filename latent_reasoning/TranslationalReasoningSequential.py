@@ -119,7 +119,7 @@ class RNNModel(nn.Module):
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
     def forward(self, input, hidden):
-        emb = self.drop(self.encoder(input))
+        emb = self.drop(self.encoder(input["input_ids"]))
         output, hidden = self.rnn(emb, hidden)
         output = self.drop(output)
         return output
