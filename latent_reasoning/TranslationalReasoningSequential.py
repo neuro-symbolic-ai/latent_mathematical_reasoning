@@ -5,14 +5,14 @@ import numpy as np
 import math
 
 class TransLatentReasoningSeq(nn.Module):
-    def __init__(self, model_type, n_tokens, n_operations, device):
+    def __init__(self, model_type = "RNN", n_tokens, n_operations, device):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
         # Load encoder model
-        if model_type == "transformer":
+        if model_type == "TRANSFORMER":
             self.encoder = TransformerModel(n_tokens).to(device)
-        elif model_type == "rnn":
-            self.encoder = RNNModel(200, 200, 3, 0.5)
+        elif model_type == "RNN":
+            self.encoder = RNNModel(n_tokens).to(device)
         self.dim = self.encoder.ninp
         #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
@@ -90,9 +90,47 @@ class TransLatentReasoningSeq(nn.Module):
 
 
 #RNN ENCODER
-Class RNNModel(nn.Module):
-    def __init__(self, ntoken, ninp = 300, nhidden = 300, nlayers = 3, dropout = 0.5): 
-        self.encoder = nn.Embedding
+class RNNModel(nn.Module):
+    """Container module with an encoder, a recurrent module, and a decoder."""
+
+    def __init__(self, ntoken, rnn_type = "LSTM" ninp = 300, nhid = 300, nlayers = 3, dropout=0.5):
+        super(RNNModel, self).__init__()
+        self.ntoken = ntoken
+        self.drop = nn.Dropout(dropout)
+        self.encoder = nn.Embedding(ntoken, ninp)
+        if rnn_type in ['LSTM', 'GRU']:
+            self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout)
+        else:
+            try:
+                nonlinearity = {'RNN_TANH': 'tanh', 'RNN_RELU': 'relu'}[rnn_type]
+            except KeyError as e:
+                raise ValueError( """An invalid option for `--model` was supplied,
+                                 options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']""") from e
+            self.rnn = nn.RNN(ninp, nhid, nlayers, nonlinearity=nonlinearity, dropout=dropout)
+
+        self.init_weights()
+
+        self.rnn_type = rnn_type
+        self.nhid = nhid
+        self.nlayers = nlayers
+
+    def init_weights(self):
+        initrange = 0.1
+        nn.init.uniform_(self.encoder.weight, -initrange, initrange)
+
+    def forward(self, input, hidden):
+        emb = self.drop(self.encoder(input))
+        output, hidden = self.rnn(emb, hidden)
+        output = self.drop(output)
+        return output
+
+    def init_hidden(self, bsz):
+        weight = next(self.parameters())
+        if self.rnn_type == 'LSTM':
+            return (weight.new_zeros(self.nlayers, bsz, self.nhid),
+                    weight.new_zeros(self.nlayers, bsz, self.nhid))
+        else:
+            return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
 #TRANSFORMER ENCODER
 # Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
