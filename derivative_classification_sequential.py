@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
-from latent_reasoning.TranslationalReasoningTransformer import TransLatentReasoningSeq
+from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
     
 class Experiment:
 
@@ -26,6 +26,8 @@ class Experiment:
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
+        print(self.corpus.dictionary.word2idx)
+        print(len(self.corpus.dictionary))
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
@@ -59,7 +61,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 2000
+        eval_steps_cycle = 1000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -76,8 +78,8 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.evaluation()
+                if steps % eval_steps_cycle == 0:
+                    self.evaluation()
 
 
     def evaluation(self, batch_size = 2, save_best_model = True):
@@ -126,8 +128,8 @@ class Experiment:
                         label_metric.append(0)
                     label_index += 1
                     batch_index += 1
-                #if eval_steps > max_steps:
-                #    break
+                if eval_steps > max_steps:
+                    break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
                 #new best score

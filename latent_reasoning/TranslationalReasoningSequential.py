@@ -2,14 +2,17 @@ from transformers import AutoTokenizer, AutoModel
 import torch
 from torch import nn
 import numpy as np
-
+import math
 
 class TransLatentReasoningSeq(nn.Module):
-    def __init__(self, n_tokens, n_operations, device):
+    def __init__(self, model_type, n_tokens, n_operations, device):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
         # Load encoder model
-        self.encoder = TransformerModel(n_tokens).to(device)
+        if model_type == "transformer":
+            self.encoder = TransformerModel(n_tokens).to(device)
+        elif model_type == "rnn":
+            self.encoder = RNNModel(200, 200, 3, 0.5)
         self.dim = self.encoder.ninp
         #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
@@ -29,12 +32,15 @@ class TransLatentReasoningSeq(nn.Module):
 
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
+        #equation1 = equation1.to(self.device)
         embeddings_eq1 = self.encoder(equation1)
         
         equation2 = {k: v.to(self.device) for k, v in equation2.items()}
+        #equation2 = equation2.to(self.device)
         embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
+        #target_equation = target_equation.to(self.device)
         embeddings_target = self.encoder(target_equation)
 
         features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
@@ -83,6 +89,10 @@ class TransLatentReasoningSeq(nn.Module):
         return scores, embeddings_output - ov
 
 
+#RNN ENCODER
+Class RNNModel(nn.Module):
+    def __init__(self, ntoken, ninp = 300, nhidden = 300, nlayers = 3, dropout = 0.5): 
+        self.encoder = nn.Embedding
 
 #TRANSFORMER ENCODER
 # Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
@@ -133,7 +143,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, ninp = 200, nhead = 2, nhid = 200, nlayers = 2, dropout=0.5):
+    def __init__(self, ntoken, ninp = 768, nhead = 4, nhid = 768, nlayers = 3, dropout=0.5):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -141,10 +151,10 @@ class TransformerModel(nn.Module):
             raise ImportError('TransformerEncoder module does not exist in PyTorch 1.1 or '
                               'lower.') from e
         self.model_type = 'Transformer'
-        self.src_mask = None
+        #self.src_mask = None
         self.encoder = nn.Embedding(ntoken, ninp)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
-        encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout)
+        encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout, batch_first = True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.ninp = ninp
 
@@ -159,16 +169,23 @@ class TransformerModel(nn.Module):
         initrange = 0.1
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
-    def forward(self, src, has_mask=True):
-        if has_mask:
-            device = src.device
-            if self.src_mask is None or self.src_mask.size(0) != len(src):
-                mask = self._generate_square_subsequent_mask(len(src)).to(device)
-                self.src_mask = mask
-        else:
-            self.src_mask = None
+    def mean_pooling(self, model_output, attention_mask):
+        token_embeddings = model_output
+        input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
+    def forward(self, src, has_mask=True):
+        #if has_mask:
+        #    device = src.device
+        #    if self.src_mask is None or self.src_mask.size(0) != len(src):
+        #        mask = self._generate_square_subsequent_mask(len(src)).to(device)
+        #        self.src_mask = mask
+        #else:
+        #    self.src_mask = None
+        src_mask = src["attention_mask"]
+        src = src["input_ids"]
         src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)
-        output = self.transformer_encoder(src, self.src_mask)
+        output = self.transformer_encoder(src, src_key_padding_mask = src_mask)
+        output = self.mean_pooling(output, src_mask)
         return output
