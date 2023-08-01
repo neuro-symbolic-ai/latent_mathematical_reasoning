@@ -47,15 +47,13 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        #majority_class_preds = [1 for pred in logits]
-        #majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
-        #print("majority_class_baseline:", majority_baseline_score)
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
     def train_and_eval(self):
         device = self.device
         self.model.to(device)
+        self.model.train()
         
         train_loader = DataLoader(self.train_dataset.with_format("torch"), batch_size=self.batch_size, shuffle=True)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
@@ -93,7 +91,7 @@ class Experiment:
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
-                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
+                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0, "difference": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
@@ -132,7 +130,8 @@ class Experiment:
                 if eval_steps > max_steps:
                     break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
-            if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
+            eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
+            if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
@@ -143,7 +142,6 @@ class Experiment:
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
-            print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
             print("current scores:", eval_metrics)
             print("best scores:", self.eval_best_scores[loader])
 

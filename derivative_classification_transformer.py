@@ -87,7 +87,7 @@ class Experiment:
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
-                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
+                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0, "difference": 0.0}
         #START EVALUATION
         self.model.eval()
         print("EVALUATION")
@@ -127,7 +127,8 @@ class Experiment:
                 #if eval_steps > max_steps:
                 #    break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
-            if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
+            eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
+            if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
@@ -138,7 +139,6 @@ class Experiment:
             print("=============="+loader+"==============")
             print("positive avg sim:", np.mean(scores_pos))
             print("negative avg sim:", np.mean(scores_neg))
-            print("difference:", np.mean(scores_pos) - np.mean(scores_neg))
             print("current scores:", eval_metrics)
             print("best scores:", self.eval_best_scores[loader])
 

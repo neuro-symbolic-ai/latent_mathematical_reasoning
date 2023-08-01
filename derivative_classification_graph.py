@@ -85,10 +85,6 @@ class Experiment:
     def tokenize_function(self, examples):
         examples["equation1"] = self.construct_graph(examples["equation1"],examples["equation2"])
         examples["target"] = self.construct_graph(examples["target"], examples["equation2"])
-        #if len(examples) != 5:
-        #    print(examples)
-        #if examples["operation"] == 0:
-        #    print(examples)
         return examples
 
 
@@ -101,6 +97,7 @@ class Experiment:
     def train_and_eval(self):
         device = self.device
         self.model.to(device)
+        self.model.train()
         
         train_loader = DataLoader(self.train_dataset.with_format("torch"), batch_size=self.batch_size,  shuffle=True, collate_fn=pad_collate)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
@@ -109,7 +106,6 @@ class Experiment:
         eval_steps_cycle = 100
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
-            self.model.train()
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
@@ -126,7 +122,9 @@ class Experiment:
                 optim.step()
                 #evaluation
                 #if steps % eval_steps_cycle == 0:
+            self.model.eval()
             self.evaluation()
+            self.model.train()
 
     def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
@@ -137,9 +135,8 @@ class Experiment:
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False, collate_fn=pad_collate)
             if not dataset_name in self.eval_best_scores:
-                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0}
+                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0, "difference": 0.0}
         #START EVALUATION
-        self.model.eval()
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
@@ -172,7 +169,8 @@ class Experiment:
                 #    break
                 eval_steps += 1
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
-            if eval_metrics["f1"] > self.eval_best_scores[loader]["f1"]:
+            eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
+            if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
