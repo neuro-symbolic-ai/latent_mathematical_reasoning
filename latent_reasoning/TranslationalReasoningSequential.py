@@ -157,7 +157,7 @@ class PositionalEncoding(nn.Module):
         >>> pos_encoder = PositionalEncoding(d_model)
     """
 
-    def __init__(self, d_model, dropout=0.1, max_len=1024):
+    def __init__(self, d_model, dropout=0.1, max_len=128):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -195,20 +195,12 @@ class TransformerModel(nn.Module):
         except BaseException as e:
             raise ImportError('TransformerEncoder module does not exist in PyTorch 1.1 or '
                               'lower.') from e
-        self.model_type = 'Transformer'
-        #self.src_mask = None
         self.encoder = nn.Embedding(ntoken, ninp)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout, batch_first = True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)
         self.ninp = ninp
-
         self.init_weights()
-
-    def _generate_square_subsequent_mask(self, sz):
-        mask = (torch.triu(torch.ones(sz, sz)) == 1).transpose(0, 1)
-        mask = mask.float().masked_fill(mask == 0, float('-inf')).masked_fill(mask == 1, float(0.0))
-        return mask
 
     def init_weights(self):
         initrange = 0.1
@@ -219,14 +211,7 @@ class TransformerModel(nn.Module):
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
         return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
 
-    def forward(self, src, has_mask=True):
-        #if has_mask:
-        #    device = src.device
-        #    if self.src_mask is None or self.src_mask.size(0) != len(src):
-        #        mask = self._generate_square_subsequent_mask(len(src)).to(device)
-        #        self.src_mask = mask
-        #else:
-        #    self.src_mask = None
+    def forward(self, src):
         src_mask = src["input_mask"]
         src = src["input_ids"]
         src = self.encoder(src) * math.sqrt(self.ninp)

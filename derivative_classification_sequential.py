@@ -40,9 +40,7 @@ class Experiment:
             self.model.load_state_dict(torch.load(load_model_path))
 
     def tokenize_function(self, examples):
-        examples["equation1"] = self.tokenizer(examples["equation1"])
-        examples["equation2"] = self.tokenizer(examples["equation2"])
-        examples["target"] = self.tokenizer(examples["target"])
+        examples["equation1"], examples["equation2"], examples["target"] = self.tokenizer([examples["equation1"], examples["equation2"], examples["target"]])
         return examples
 
     def compute_metrics(self, eval_pred):

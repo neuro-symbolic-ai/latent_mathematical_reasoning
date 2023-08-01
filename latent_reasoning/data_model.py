@@ -8,7 +8,7 @@ class DataModel:
         #PROCESS DATA
         self.tokenize_function = tokenize_function
         #training data needs to be processed for operations and setup
-        self.train_dataset = self.process_dataset(neg = neg, srepr = srepr)
+        self.train_dataset = self.process_dataset(neg = neg, srepr = srepr) #dataset_path = ["data/differentiation.json", "data/integration.json"])
         self.eval_dict = {}
         if do_train:
             self.tokenized_train_dataset = self.train_dataset.map(self.tokenize_function, batched=False)
@@ -158,10 +158,6 @@ class DataModelMultiStep:
         example_id = 0
         print("Processing the dataset...")
         for example in tqdm(d_json, desc= dataset_path):
-            #NEED TO FIX THE DATASET GENERATION
-            #if len(example["steps"]) < 6:
-            #    print(example["steps"])
-            #    continue
             step_count = 0
             formatted_example = {}
             formatted_example["idx"] = example_id
