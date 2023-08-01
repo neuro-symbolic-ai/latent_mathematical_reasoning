@@ -10,9 +10,9 @@ class TransLatentReasoningSeq(nn.Module):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
         # Load encoder model
-        if model_type == "TRANSFORMER":
+        if model_type == "transformer":
             self.encoder = TransformerModel(n_tokens).to(device)
-        elif model_type == "RNN":
+        elif model_type == "rnn":
             self.encoder = RNNModel(n_tokens, device).to(device)
         self.dim = self.encoder.ninp
         #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
@@ -94,7 +94,7 @@ class TransLatentReasoningSeq(nn.Module):
 class RNNModel(nn.Module):
     """Container module with an encoder, a recurrent module, and a decoder."""
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 768, nhid = 768, nlayers = 3, dropout=0.5):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 512, nhid = 512, nlayers = 3, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
@@ -124,11 +124,10 @@ class RNNModel(nn.Module):
     def forward(self, input):
         #h_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
         #c_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
-        input_mask = torch.clamp(input["attention_mask"].sum(1))
-        print(input_mask.size())
-        pack = nn.utils.rnn.pack_padded_sequence(input['input_ids'], input_mask, batch_first=True)
-        emb = self.drop(self.encoder(input["input_ids"]))
-        output, hidden = self.rnn(emb)
+        seq_lengths = input["input_mask"].sum(1).to("cpu")
+        emb = self.drop(self.encoder(input['input_ids']))
+        pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths, batch_first=True, enforce_sorted = False)
+        output, hidden = self.rnn(pack)
         #output = self.drop(hidden[0][-1])
         return hidden[0][-1]
 
@@ -158,7 +157,7 @@ class PositionalEncoding(nn.Module):
         >>> pos_encoder = PositionalEncoding(d_model)
     """
 
-    def __init__(self, d_model, dropout=0.1, max_len=5000):
+    def __init__(self, d_model, dropout=0.1, max_len=1024):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -189,7 +188,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, ninp = 768, nhead = 4, nhid = 768, nlayers = 3, dropout=0.5):
+    def __init__(self, ntoken, ninp = 512, nhead = 8, nhid = 512, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -228,7 +227,7 @@ class TransformerModel(nn.Module):
         #        self.src_mask = mask
         #else:
         #    self.src_mask = None
-        src_mask = src["attention_mask"]
+        src_mask = src["input_mask"]
         src = src["input_ids"]
         src = self.encoder(src) * math.sqrt(self.ninp)
         src = self.pos_encoder(src)

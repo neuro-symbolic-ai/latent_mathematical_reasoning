@@ -53,4 +53,4 @@ class Corpus(object):
         for i in range(max_len-word_count):
             ids.append(self.dictionary.word2idx["[PAD]"])
             mask.append(0)
-        return {'input_ids': torch.tensor(ids).type(torch.int64), 'attention_mask': torch.tensor(mask).type(torch.bool)}
+        return {'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)}

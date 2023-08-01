@@ -14,7 +14,7 @@ from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoni
 class Experiment:
 
     def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None, do_train = True, do_test = False):
-        self.model_name = model
+        self.model_type = model
         self.epochs = epochs
         self.learning_rate = learning_rate
         self.max_length = max_length
@@ -34,7 +34,7 @@ class Experiment:
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
         #create model
-        self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device)
+        self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path))
@@ -137,7 +137,7 @@ class Experiment:
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
                 if save_best_model:
-                    PATH = "models/" + self.model_name + "_best_" + loader + "_" + str(self.num_ops) + ".pt"
+                    PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.num_ops) + ".pt"
                     torch.save(self.model.state_dict(), PATH)
             #print results
             print("=============="+loader+"==============")
@@ -159,7 +159,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-7, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
