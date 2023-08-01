@@ -6,6 +6,8 @@ Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICK
 
 Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv 
 
+![Image description](latent_math_reasoning.png)
+
 ## Related Work
 - Mthematical Reasoning in Latent Space
 - Symbolic Brittleness in Sequence Models: on Systematic Generalization in Symbolic Mathematics
