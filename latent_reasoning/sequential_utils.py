@@ -54,3 +54,33 @@ class Corpus(object):
             ids.append(self.dictionary.word2idx["[PAD]"])
             mask.append(0)
         return {'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)}
+
+    def var_tokenizer(self, sentence:str, max_len:int = 128):
+        variables = {}
+        vars_count = 0
+        sep_tokens = ["{", "}", "(", ")", "^", "d"]
+        for token in sep_tokens:
+            sentence = sentence.replace(token, " " + token + " ")
+        sentence = sentence.replace("  ", " ")
+        words = sentence.split(" ")
+        ids = []
+        mask = []
+        word_count = 0
+        for word in words:
+            if not "\\" in word and not word in sep_tokens and word.isalpha():
+                if not word in variables:
+                    variables[word] = "var_" + str(vars_count)
+                    vars_count += 1
+                self.dictionary.add_word(variables[word])
+                ids.append(self.dictionary.word2idx[variables[word]])
+            else:
+                self.dictionary.add_word(word)
+                ids.append(self.dictionary.word2idx[word])           
+            mask.append(1)
+            word_count += 1
+            if word_count == max_len:
+                break
+        for i in range(max_len-word_count):
+            ids.append(self.dictionary.word2idx["[PAD]"])
+            mask.append(0)
+        return {'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)}
