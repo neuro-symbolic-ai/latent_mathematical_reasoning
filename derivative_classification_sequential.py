@@ -21,7 +21,7 @@ class Experiment:
         self.batch_size = batch_size
         #LOAD DATA
         self.corpus = Corpus()
-        self.tokenizer = self.corpus.tokenizer
+        self.tokenizer = self.corpus.var_tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
@@ -177,7 +177,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            #load_model_path = "models/distilbert-base-uncased_best_dev_set_6.pt",
+            #load_model_path = "models/transformer_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True
             )
