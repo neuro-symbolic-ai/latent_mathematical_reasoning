@@ -155,7 +155,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-3, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
@@ -175,7 +175,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            #load_model_path = "models/transformer_best_dev_set_6.pt",
+            #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True
             )

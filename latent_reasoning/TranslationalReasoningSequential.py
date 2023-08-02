@@ -92,7 +92,7 @@ class TransLatentReasoningSeq(nn.Module):
 
 class RNNModel(nn.Module):
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 512, nhid = 512, nlayers = 3, dropout=0.1):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 200, nhid = 200, nlayers = 1, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
@@ -145,7 +145,7 @@ class PositionalEncoding(nn.Module):
         >>> pos_encoder = PositionalEncoding(d_model)
     """
 
-    def __init__(self, d_model, dropout=0.1, max_len=1024):
+    def __init__(self, d_model, dropout=0.1, max_len=128):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 
@@ -177,7 +177,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 512, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 2048, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
