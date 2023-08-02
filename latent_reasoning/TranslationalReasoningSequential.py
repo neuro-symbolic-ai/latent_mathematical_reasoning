@@ -157,7 +157,7 @@ class PositionalEncoding(nn.Module):
         >>> pos_encoder = PositionalEncoding(d_model)
     """
 
-    def __init__(self, d_model, dropout=0.1, max_len=128):
+    def __init__(self, d_model, dropout=0.1, max_len=1024):
         super(PositionalEncoding, self).__init__()
         self.dropout = nn.Dropout(p=dropout)
 

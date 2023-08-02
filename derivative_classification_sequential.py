@@ -74,13 +74,13 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.model.eval()
-                    self.evaluation()
-                    self.model.train()
+                #if steps % eval_steps_cycle == 0:
+            self.model.eval()
+            self.evaluation()
+            self.model.train()
 
 
-    def evaluation(self, batch_size = 2, save_best_model = True):
+    def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -109,7 +109,7 @@ class Experiment:
                 outputs = self.model(equation1, equation2, target, operation, labels)
                 batch_index = 0
                 for score in outputs[1]:
-                    if score == torch.max(outputs[1]):
+                    if score > 0.0:
                         logits_metric.append(1)
                     else:
                         logits_metric.append(0)
@@ -125,8 +125,8 @@ class Experiment:
                         label_metric.append(0)
                     label_index += 1
                     batch_index += 1
-                if eval_steps > max_steps:
-                    break
+                #if eval_steps > max_steps:
+                #    break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:

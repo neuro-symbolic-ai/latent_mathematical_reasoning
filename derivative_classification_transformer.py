@@ -78,7 +78,7 @@ class Experiment:
             self.evaluation()
 
 
-    def evaluation(self, batch_size = 2, save_best_model = True):
+    def evaluation(self, batch_size = 4, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -108,7 +108,7 @@ class Experiment:
                 outputs = self.model(equation1, equation2, target, operation, labels)
                 batch_index = 0
                 for score in outputs[1]:
-                    if score == torch.max(outputs[1]):
+                    if score > 0.0:
                         logits_metric.append(1)
                     else:
                         logits_metric.append(0)
