@@ -6,16 +6,17 @@ import math
 from torch.autograd import Variable
 
 class TransLatentReasoningSeq(nn.Module):
-    def __init__(self, n_tokens, n_operations, device, model_type = "RNN"):
+    def __init__(self, n_tokens, n_operations, device, model_type = "transformer"):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
+        
         # Load encoder model
         if model_type == "transformer":
-            self.encoder = TransformerModel(n_tokens).to(device)
+            self.encoder = TransformerModel(n_tokens, device).to(device)
         elif model_type == "rnn":
             self.encoder = RNNModel(n_tokens, device).to(device)
+        
         self.dim = self.encoder.ninp
-        #self.encoder_transf = AutoModel.from_pretrained(model_name).to(device)
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
         
         self.ov = nn.Embedding(n_operations, self.dim, padding_idx=0)
@@ -33,15 +34,12 @@ class TransLatentReasoningSeq(nn.Module):
 
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-        #equation1 = equation1.to(self.device)
         embeddings_eq1 = self.encoder(equation1)
         
         equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        #equation2 = equation2.to(self.device)
         embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
-        #target_equation = target_equation.to(self.device)
         embeddings_target = self.encoder(target_equation)
 
         features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
@@ -90,9 +88,9 @@ class TransLatentReasoningSeq(nn.Module):
         return scores, embeddings_output - ov
 
 
-#RNN ENCODER
+# ============================================ RNN ENCODER ================================================
+
 class RNNModel(nn.Module):
-    """Container module with an encoder, a recurrent module, and a decoder."""
 
     def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 512, nhid = 512, nlayers = 3, dropout=0.1):
         super(RNNModel, self).__init__()
@@ -101,6 +99,7 @@ class RNNModel(nn.Module):
         self.ninp = ninp
         self.device = device
         self.encoder = nn.Embedding(ntoken, ninp)
+        
         if rnn_type in ['LSTM', 'GRU']:
             self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout, batch_first = True)
         else:
@@ -112,7 +111,6 @@ class RNNModel(nn.Module):
             self.rnn = nn.RNN(ninp, nhid, nlayers, nonlinearity=nonlinearity, dropout=dropout)
 
         self.init_weights()
-
         self.rnn_type = rnn_type
         self.nhid = nhid
         self.nlayers = nlayers
@@ -122,25 +120,15 @@ class RNNModel(nn.Module):
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
     def forward(self, input):
-        #h_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
-        #c_0 = Variable(torch.zeros(self.nlayers, input["input_ids"].size()[0], self.nhid).to(self.device))
         seq_lengths = input["input_mask"].sum(1).to("cpu")
         emb = self.drop(self.encoder(input['input_ids']))
         pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths, batch_first=True, enforce_sorted = False)
         output, hidden = self.rnn(pack)
-        #output = self.drop(hidden[0][-1])
         return hidden[0][-1]
 
-    def init_hidden(self, bsz):
-        weight = next(self.parameters())
-        if self.rnn_type == 'LSTM':
-            return (weight.new_zeros(self.nlayers, bsz, self.nhid),
-                    weight.new_zeros(self.nlayers, bsz, self.nhid))
-        else:
-            return weight.new_zeros(self.nlayers, bsz, self.nhid)
 
-#TRANSFORMER ENCODER
-# Temporarily leave PositionalEncoding module here. Will be moved somewhere else.
+# ========================================= TRANSFORMER ENCODER ==============================================
+
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
         The positional encodings have the same dimension as the embeddings, so that the two can be summed.
@@ -183,12 +171,13 @@ class PositionalEncoding(nn.Module):
         x = x + self.pe[:x.size(0), :]
         return self.dropout(x)
 
+
 class TransformerModel(nn.Module):
-    """Container module with an encoder, a recurrent or transformer module, and mean pooling.
+    """Container module with an encoder, a transformer module, and mean pooling.
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, ninp = 512, nhead = 8, nhid = 512, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 512, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
