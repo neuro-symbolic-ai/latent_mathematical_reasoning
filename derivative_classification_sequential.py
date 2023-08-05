@@ -57,7 +57,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         
         print("Start training...")
-        eval_steps_cycle = 1000
+        eval_steps_cycle = 2000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -74,10 +74,10 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.model.eval()
-            self.evaluation()
-            self.model.train()
+                if steps % eval_steps_cycle == 0:
+                    self.model.eval()
+                    self.evaluation()
+                    self.model.train()
 
 
     def evaluation(self, batch_size = 4, save_best_model = True):
@@ -125,8 +125,8 @@ class Experiment:
                         label_metric.append(0)
                     label_index += 1
                     batch_index += 1
-                #if eval_steps > max_steps:
-                #    break
+                if eval_steps > max_steps:
+                    break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
@@ -155,7 +155,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-3, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")

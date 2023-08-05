@@ -90,12 +90,12 @@ class Corpus(object):
                         ids.append(self.dictionary.word2idx[word])
                     else:
                         ids.append(self.dictionary.word2idx["[UNK"])
-                mask.append(1)
+                mask.append(0)
                 word_count += 1
                 if word_count == max_len:
                     break
             for i in range(max_len-word_count):
                 ids.append(self.dictionary.word2idx["[PAD]"])
-                mask.append(0)
+                mask.append(1)
             tokenized_sentences.append({'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)})
         return tokenized_sentences

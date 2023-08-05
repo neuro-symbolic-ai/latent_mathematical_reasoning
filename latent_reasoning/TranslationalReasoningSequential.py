@@ -47,14 +47,14 @@ class TransLatentReasoningSeq(nn.Module):
 
         #TRANSLATIONAL MODEL
         embeddings_output = embeddings_output * Wo
-        embeddings_target = embeddings_target + ov
+        embeddings_target1 = embeddings_target + ov
 
         #COMPUTE LOSS
-        scores = self.similarity_fct(embeddings_output, embeddings_target)
+        scores = self.similarity_fct(embeddings_output, embeddings_target1)
         labels = labels.to(self.device)
         loss = self.loss_function(scores, labels)
 
-        return loss, scores, labels, embeddings_output
+        return loss, scores, labels
 
 
     def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
@@ -120,9 +120,9 @@ class RNNModel(nn.Module):
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
     def forward(self, input):
-        seq_lengths = input["input_mask"].sum(1).to("cpu")
+        seq_lengths = self.ninp - input["input_mask"].sum(1)
         emb = self.drop(self.encoder(input['input_ids']))
-        pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths, batch_first=True, enforce_sorted = False)
+        pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths.to("cpu"), batch_first=True, enforce_sorted = False)
         output, hidden = self.rnn(pack)
         return hidden[0][-1]
 
@@ -154,7 +154,7 @@ class PositionalEncoding(nn.Module):
         div_term = torch.exp(torch.arange(0, d_model, 2).float() * (-math.log(10000.0) / d_model))
         pe[:, 0::2] = torch.sin(position * div_term)
         pe[:, 1::2] = torch.cos(position * div_term)
-        pe = pe.unsqueeze(0).transpose(0, 1)
+        pe = pe.unsqueeze(0)
         self.register_buffer('pe', pe)
 
     def forward(self, x):
@@ -162,13 +162,12 @@ class PositionalEncoding(nn.Module):
         Args:
             x: the sequence fed to the positional encoder model (required).
         Shape:
-            x: [sequence length, batch size, embed dim]
-            output: [sequence length, batch size, embed dim]
+            x: [batch size, seq_length, embed dim]
+            output: [batch size, seq_length, embed dim]
         Examples:
             >>> output = pos_encoder(x)
         """
-
-        x = x + self.pe[:x.size(0), :]
+        x = x + self.pe[:x.size(1), :]
         return self.dropout(x)
 
 
@@ -198,7 +197,7 @@ class TransformerModel(nn.Module):
     def mean_pooling(self, model_output, attention_mask):
         token_embeddings = model_output
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(input_mask_expanded.sum(1), min=1e-9)
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(self.ninp - input_mask_expanded.sum(1), min=1e-9)
 
     def forward(self, src):
         src_mask = src["input_mask"]
