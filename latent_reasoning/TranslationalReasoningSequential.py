@@ -1,9 +1,12 @@
 from transformers import AutoTokenizer, AutoModel
 import torch
-from torch import nn
+import torch.nn as nn
+import torch.nn.functional as F
 import numpy as np
 import math
 from torch.autograd import Variable
+
+
 
 class TransLatentReasoningSeq(nn.Module):
     def __init__(self, n_tokens, n_operations, device, model_type = "transformer"):
@@ -15,7 +18,7 @@ class TransLatentReasoningSeq(nn.Module):
             self.encoder = TransformerModel(n_tokens, device).to(device)
         elif model_type == "rnn":
             self.encoder = RNNModel(n_tokens, device).to(device)
-        if model_type == "cnn":
+        elif model_type == "cnn":
             self.encoder = CNNModel(n_tokens, device).to(device)
         
         self.dim = self.encoder.ninp
@@ -94,13 +97,13 @@ class TransLatentReasoningSeq(nn.Module):
 
 class RNNModel(nn.Module):
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 300, nhid = 300, nlayers = 1, dropout=0.1):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 300, nhid = 300, nlayers = 2, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
         self.ninp = ninp
         self.device = device
-        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx = 0)
         
         if rnn_type in ['LSTM', 'GRU']:
             self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout, batch_first = True)
@@ -112,7 +115,9 @@ class RNNModel(nn.Module):
                                  options are ['LSTM', 'GRU', 'RNN_TANH' or 'RNN_RELU']""") from e
             self.rnn = nn.RNN(ninp, nhid, nlayers, nonlinearity=nonlinearity, dropout=dropout)
 
-        self.init_weights()
+        self.fc = nn.Linear(nhid, ninp)
+        
+        #self.init_weights()
         self.rnn_type = rnn_type
         self.nhid = nhid
         self.nlayers = nlayers
@@ -122,11 +127,12 @@ class RNNModel(nn.Module):
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
     def forward(self, input):
-        seq_lengths = self.ninp - input["input_mask"].sum(1)
-        emb = self.drop(self.encoder(input['input_ids']))
+        seq_lengths = input["input_mask"].size(1) - input["input_mask"].sum(1)
+        emb = self.encoder(input['input_ids'])
         pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths.to("cpu"), batch_first=True, enforce_sorted = False)
-        output, hidden = self.rnn(pack)
-        return hidden[0][-1]
+        _ , hidden = self.rnn(pack)
+        output = self.fc(self.drop(hidden[0][-1]))
+        return output
 
 
 
@@ -136,7 +142,7 @@ class CNNModel(nn.Module):
        https://colab.research.google.com/drive/1b7aZamr065WPuLpq9C4RU6irB59gbX_K#scrollTo=ejGLw8TKViBY
     """
     def __init__(self, ntoken, device, ninp = 300, nhid = 300, filter_sizes=[3, 4, 5], num_filters=[100, 100, 100], dropout=0.1):
-        super(CNN_NLP, self).__init__()            
+        super(CNNModel, self).__init__()            
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
         self.ninp = ninp
@@ -153,7 +159,7 @@ class CNNModel(nn.Module):
         self.fc = nn.Linear(np.sum(num_filters), nhid)
         self.dropout = nn.Dropout(p=dropout)
 
-        self.init_weights()
+        #self.init_weights()
         self.nhid = nhid
 
     def init_weights(self):
@@ -240,7 +246,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 2048, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 300, nhead = 8, nhid = 1048, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
@@ -262,7 +268,7 @@ class TransformerModel(nn.Module):
     def mean_pooling(self, model_output, attention_mask):
         token_embeddings = model_output
         input_mask_expanded = attention_mask.unsqueeze(-1).expand(token_embeddings.size()).float()
-        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(self.ninp - input_mask_expanded.sum(1), min=1e-9)
+        return torch.sum(token_embeddings * input_mask_expanded, 1) / torch.clamp(attention_mask.size(1) - input_mask_expanded.sum(1), min=1e-9)
 
     def forward(self, src):
         src_mask = src["input_mask"]
