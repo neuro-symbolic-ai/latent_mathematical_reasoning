@@ -20,12 +20,14 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, min_vars_n = 10):
+    def __init__(self, max_len = 128, min_vars_n = 10):
         self.dictionary = Dictionary()
         # padding
         self.dictionary.add_word("[PAD]")
         # unknown token
         self.dictionary.add_word("[UNK]")
+        # max sequence length
+        self.max_len = max_len
         # preset of variable tokens
         for var_count in range(min_vars_n):
             self.dictionary.add_word("var_" + str(var_count))
@@ -40,7 +42,7 @@ class Corpus(object):
                 for word in words:
                     self.dictionary.add_word(word)
 
-    def tokenizer(self, sentence:str, max_len:int = 128):
+    def tokenizer(self, sentence:str):
         sentence = sentence.replace("{", " { ").replace("}", " } ").replace("(", " ( ").replace(")", " ) ").replace("^", " ^ ").replace("d", " d ").replace("  ", " ")
         words = sentence.split(" ")
         ids = []
@@ -49,16 +51,16 @@ class Corpus(object):
         for word in words:
             self.dictionary.add_word(word)
             ids.append(self.dictionary.word2idx[word])
-            mask.append(1)
-            word_count += 1
-            if word_count == max_len:
-                break
-        for i in range(max_len-word_count):
-            ids.append(self.dictionary.word2idx["[PAD]"])
             mask.append(0)
+            word_count += 1
+            if word_count == self.max_len:
+                break
+        for i in range(self.max_len-word_count):
+            ids.append(self.dictionary.word2idx["[PAD]"])
+            mask.append(1)
         return {'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)}
 
-    def var_tokenizer(self, sentences:list, build_vocabulary = True, max_len:int = 128):
+    def var_tokenizer(self, sentences:list, build_vocabulary = True):
         variables = {}
         vars_count = 0
         sep_tokens = ["{", "}", "(", ")", "[", "]", "^", "d", "_", "|"]
@@ -92,9 +94,9 @@ class Corpus(object):
                         ids.append(self.dictionary.word2idx["[UNK"])
                 mask.append(0)
                 word_count += 1
-                if word_count == max_len:
+                if word_count == self.max_len:
                     break
-            for i in range(max_len-word_count):
+            for i in range(self.max_len-word_count):
                 ids.append(self.dictionary.word2idx["[PAD]"])
                 mask.append(1)
             tokenized_sentences.append({'input_ids': torch.tensor(ids).type(torch.int64), 'input_mask': torch.tensor(mask).type(torch.bool)})

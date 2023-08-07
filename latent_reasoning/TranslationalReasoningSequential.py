@@ -15,11 +15,13 @@ class TransLatentReasoningSeq(nn.Module):
             self.encoder = TransformerModel(n_tokens, device).to(device)
         elif model_type == "rnn":
             self.encoder = RNNModel(n_tokens, device).to(device)
+        if model_type == "cnn":
+            self.encoder = CNNModel(n_tokens, device).to(device)
         
         self.dim = self.encoder.ninp
         self.linear = nn.Linear(self.dim*3, self.dim).to(device)
         
-        self.ov = nn.Embedding(n_operations, self.dim, padding_idx=0)
+        self.ov = nn.Embedding(n_operations, self.dim)
         self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
         self.Wo = torch.nn.Parameter(torch.tensor(np.random.uniform(-1,1, (n_operations, self.dim)), dtype=torch.float, requires_grad=True, device=self.device))
         
@@ -92,13 +94,13 @@ class TransLatentReasoningSeq(nn.Module):
 
 class RNNModel(nn.Module):
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 200, nhid = 200, nlayers = 1, dropout=0.1):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 300, nhid = 300, nlayers = 1, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
         self.ninp = ninp
         self.device = device
-        self.encoder = nn.Embedding(ntoken, ninp)
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         
         if rnn_type in ['LSTM', 'GRU']:
             self.rnn = getattr(nn, rnn_type)(ninp, nhid, nlayers, dropout=dropout, batch_first = True)
@@ -125,6 +127,68 @@ class RNNModel(nn.Module):
         pack = nn.utils.rnn.pack_padded_sequence(emb, seq_lengths.to("cpu"), batch_first=True, enforce_sorted = False)
         output, hidden = self.rnn(pack)
         return hidden[0][-1]
+
+
+
+# ============================================ CNN ENCODER ================================================
+class CNNModel(nn.Module):
+    """An 1D Convulational Neural Network for Sentence Classification.
+       https://colab.research.google.com/drive/1b7aZamr065WPuLpq9C4RU6irB59gbX_K#scrollTo=ejGLw8TKViBY
+    """
+    def __init__(self, ntoken, device, ninp = 300, nhid = 300, filter_sizes=[3, 4, 5], num_filters=[100, 100, 100], dropout=0.1):
+        super(CNN_NLP, self).__init__()            
+        self.ntoken = ntoken
+        self.drop = nn.Dropout(dropout)
+        self.ninp = ninp
+        self.device = device
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
+        # Conv Network
+        self.conv1d_list = nn.ModuleList([
+            nn.Conv1d(in_channels=self.ninp,
+                      out_channels=num_filters[i],
+                      kernel_size=filter_sizes[i])
+            for i in range(len(filter_sizes))
+        ])
+        # Fully-connected layer and Dropout
+        self.fc = nn.Linear(np.sum(num_filters), nhid)
+        self.dropout = nn.Dropout(p=dropout)
+
+        self.init_weights()
+        self.nhid = nhid
+
+    def init_weights(self):
+        initrange = 0.1
+        nn.init.uniform_(self.encoder.weight, -initrange, initrange)
+
+    def forward(self, input):
+        """Perform a forward pass through the network.
+
+        Args:
+            input_ids (torch.Tensor): A tensor of token ids with shape
+                (batch_size, max_sent_length)
+
+        Returns:
+            logits (torch.Tensor): Output logits with shape (batch_size,
+                n_classes)
+        """
+        input_ids = input["input_ids"]
+        # Get embeddings from `input_ids`. Output shape: (b, max_len, embed_dim)
+        x_embed = self.encoder(input_ids)
+        # Permute `x_embed` to match input shape requirement of `nn.Conv1d`.
+        # Output shape: (b, embed_dim, max_len)
+        x_reshaped = x_embed.permute(0, 2, 1)
+        # Apply CNN and ReLU. Output shape: (b, num_filters[i], L_out)
+        x_conv_list = [F.relu(conv1d(x_reshaped)) for conv1d in self.conv1d_list]
+        # Max pooling. Output shape: (b, num_filters[i], 1)
+        x_pool_list = [F.max_pool1d(x_conv, kernel_size=x_conv.shape[2])
+            for x_conv in x_conv_list]
+        # Concatenate x_pool_list to feed the fully connected layer.
+        # Output shape: (b, sum(num_filters))
+        x_fc = torch.cat([x_pool.squeeze(dim=2) for x_pool in x_pool_list],
+                         dim=1)
+        # Compute logits. Output shape: (b, nhid)
+        output = self.fc(self.dropout(x_fc))
+        return output
 
 
 # ========================================= TRANSFORMER ENCODER ==============================================
@@ -183,7 +247,8 @@ class TransformerModel(nn.Module):
         except BaseException as e:
             raise ImportError('TransformerEncoder module does not exist in PyTorch 1.1 or '
                               'lower.') from e
-        self.encoder = nn.Embedding(ntoken, ninp)
+        self.device = device
+        self.encoder = nn.Embedding(ntoken, ninp, padding_idx=0)
         self.pos_encoder = PositionalEncoding(ninp, dropout)
         encoder_layers = TransformerEncoderLayer(ninp, nhead, nhid, dropout, batch_first = True)
         self.transformer_encoder = TransformerEncoder(encoder_layers, nlayers)

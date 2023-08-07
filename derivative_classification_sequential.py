@@ -20,14 +20,13 @@ class Experiment:
         self.max_length = max_length
         self.batch_size = batch_size
         #LOAD DATA
-        self.corpus = Corpus()
+        self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.var_tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
-        print(self.corpus.dictionary.word2idx)
-        print(len(self.corpus.dictionary))
+        print("Vocabulary: ", self.corpus.dictionary.word2idx)
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
@@ -52,10 +51,10 @@ class Experiment:
         device = self.device
         self.model.to(device)
         self.model.train()
-        
+        #TRAIN DATALOADER
         train_loader = DataLoader(self.train_dataset.with_format("torch"), batch_size=self.batch_size, shuffle=True)
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
-        
+        #TRAINING CYCLE
         print("Start training...")
         eval_steps_cycle = 2000
         steps = 0
@@ -84,7 +83,7 @@ class Experiment:
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
-        #build dataloaders
+        #BUILD DATALOADER FOR EVALUATION
         eval_loaders = {}
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
