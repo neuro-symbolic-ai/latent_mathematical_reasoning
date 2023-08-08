@@ -10,15 +10,18 @@ from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
+from latent_reasoning.BaselinesSequential import LatentReasoningSeq
     
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, load_model_path = None, do_train = True, do_test = False):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, load_model_path = None, do_train = True, do_test = False):
         self.model_type = model
+        print("Model:", self.model_type)
         self.epochs = epochs
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.batch_size = batch_size
+        self.trans = trans
         #LOAD DATA
         self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.var_tokenizer
@@ -33,7 +36,12 @@ class Experiment:
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
         #create model
-        self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
+        if self.trans:
+            #translational model
+            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
+        else:
+            #baseline
+            self.model = LatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path))
@@ -133,7 +141,7 @@ class Experiment:
                 self.eval_best_scores[loader] = eval_metrics
                 #SAVE THE MODEL'S PARAMETERS
                 if save_best_model:
-                    PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.num_ops) + ".pt"
+                    PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
                     torch.save(self.model.state_dict(), PATH)
             #print results
             print("=============="+loader+"==============")
@@ -174,6 +182,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
+            trans = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True

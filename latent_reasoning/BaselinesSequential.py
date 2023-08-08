@@ -9,9 +9,10 @@ from torch.autograd import Variable
 
 
 class LatentReasoningSeq(nn.Module):
-    def __init__(self, n_tokens, n_operations, device, model_type = "transformer"):
+    def __init__(self, n_tokens, n_operations, device, model_type = "transformer", one_hot = True):
         super(LatentReasoningSeq, self).__init__()
         self.device = device
+        self.one_hot = one_hot
         
         # Load encoder model
         if model_type == "transformer":
@@ -22,10 +23,14 @@ class LatentReasoningSeq(nn.Module):
             self.encoder = CNNModel(n_tokens, device).to(device)
         
         self.dim = self.encoder.ninp
-        self.linear = nn.Linear(self.dim*4, self.dim).to(device)
         
-        self.ov = nn.Embedding(n_operations, self.dim)
-        self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
+        if self.one_hot:
+            self.linear = nn.Linear(n_operations + self.dim * 3, self.dim).to(device)
+            self.ov = F.one_hot(torch.arange(n_operations)).to(device)
+        else:
+            self.linear = nn.Linear(self.dim*4, self.dim).to(device)
+            self.ov = nn.Embedding(n_operations, self.dim)
+            self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
         
         self.similarity_fct = nn.functional.cosine_similarity
         self.loss_function = nn.MSELoss()
@@ -33,7 +38,10 @@ class LatentReasoningSeq(nn.Module):
         
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
-        ov = self.ov.weight[operation]
+        if self.one_hot:
+            ov = self.ov[operation]
+        else:
+            ov = self.ov.weight[operation]
 
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
@@ -45,7 +53,7 @@ class LatentReasoningSeq(nn.Module):
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
+        features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
         embeddings_output = self.linear(features)
 
         #COMPUTE LOSS
@@ -58,7 +66,10 @@ class LatentReasoningSeq(nn.Module):
 
     def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
-        ov = self.ov.weight[operation]
+        if self.one_hot:
+            ov = self.ov[operation]
+        else:
+            ov = self.ov.weight[operation]
 
         # ENCODE EQUATIONS
         if equation1 != None:
@@ -235,7 +246,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 300, nhead = 8, nhid = 1048, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 1048, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
