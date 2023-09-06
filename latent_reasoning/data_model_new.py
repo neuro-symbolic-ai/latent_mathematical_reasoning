@@ -1,4 +1,5 @@
 import json
+import random
 from tqdm import tqdm
 from datasets import Dataset
     
@@ -14,7 +15,10 @@ class DataModel:
         self.train_dataset = self.tokenized_train_dataset["train"]
         self.eval_dict["dev_set"] = self.tokenized_train_dataset["test"]
 
-    def process_dataset(self, dataset_path = ["data/premises_dataset.json"], operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
+
+   # ["integrate", "differentiate", "add", "minus", "times", "divide"]
+    
+    def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
         if training:
             self.operations_voc = {}
@@ -29,21 +33,33 @@ class DataModel:
         formatted_examples = []
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
+        max_num_examples = 2000
+        id_example = 0
         # create an entry for each positive example
         for example in tqdm(d_json, desc= dataset_path):
+            if id_example >= max_num_examples:
+                break
+            if example["var_count"] != 2:
+                continue
+            id_example += 1
             premise = example["premise"]
             for op in operations:
                 #POSITIVE EXAMPLES
-                for res in operations[op]
+                for res in example[op]:
                     #LATEX
                     formatted_examples.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": 1.0})
+                    #print(formatted_examples[-1])
                 #NEGATIVE EXAMPLES
-                for op_neg in operations:
-                    if op_neg == op:
-                        continue
-                    for res in operations[op_neg]
-                        #LATEX
-                        formatted_examples.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op_neg], "label": 0.0})
+                #select random operation for negative example
+                neg_operations = ["add", "minus", "times", "divide"]
+                op_neg = neg_operations[random.randint(0, len(neg_operations) - 1 )]
+                while op_neg == op:
+                    op_neg = neg_operations[random.randint(0, len(neg_operations) - 1)]
+                #print("===================================================================")
+                for res in example[op_neg]:
+                    #LATEX
+                    formatted_examples.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": -1.0})
+                    #print(formatted_examples[-1])
         
         #split randomly between train, dev, and test set
         dataset = Dataset.from_list(formatted_examples)

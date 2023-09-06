@@ -22,7 +22,7 @@ class TransLatentReasoningSeq(nn.Module):
             self.encoder = CNNModel(n_tokens, device).to(device)
         
         self.dim = self.encoder.ninp
-        self.linear = nn.Linear(self.dim*3, self.dim).to(device)
+        self.linear = nn.Linear(self.dim, self.dim).to(device) #*3
         
         self.ov = nn.Embedding(n_operations, self.dim)
         self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
@@ -41,14 +41,14 @@ class TransLatentReasoningSeq(nn.Module):
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
         embeddings_eq1 = self.encoder(equation1)
         
-        equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        embeddings_eq2 = self.encoder(equation2)
+        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
+        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(features)
+        #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
+        embeddings_output = self.linear(embeddings_eq1)
 
         #TRANSLATIONAL MODEL
         embeddings_output = embeddings_output * Wo

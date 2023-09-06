@@ -24,7 +24,7 @@ class Experiment:
         self.trans = trans
         #LOAD DATA
         self.corpus = Corpus(self.max_length)
-        self.tokenizer = self.corpus.var_tokenizer
+        self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
@@ -101,7 +101,7 @@ class Experiment:
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
-            max_steps = 500
+            max_steps = 1000
             scores_pos = []
             scores_neg = []
             logits_metric = []
