@@ -20,7 +20,7 @@ class DataModel:
 
    # ["integrate", "differentiate", "add", "minus", "times", "divide"]
     
-    def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
+    def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
         if training:
             self.operations_voc = {}
@@ -36,16 +36,10 @@ class DataModel:
         formatted_examples_eval = []
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
-        max_num_train_examples = 2000
-        max_num_eval_examples = 2000        
-        id_example = 0
+        max_num_train_examples = 4000
+        max_num_eval_examples = 2000
         # create a training entry for each example
-        for example in tqdm(d_json, desc= dataset_path):
-            if id_example >= max_num_train_examples:
-                break
-            #if example["var_count"] != 2:
-            #    continue
-            id_example += 1
+        for example in tqdm(d_json[:max_num_train_examples], desc= dataset_path):
             premise = example["premise"]
             for op in operations:
                 #POSITIVE EXAMPLES
@@ -53,26 +47,9 @@ class DataModel:
                     #LATEX
                     formatted_examples_train.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": 1.0})
                     #print(formatted_examples[-1])
-                #NEGATIVE EXAMPLES
-                #select random operation for negative example
-                #neg_operations = ["add", "minus", "times", "divide"]
-                #op_neg = neg_operations[random.randint(0, len(neg_operations) - 1 )]
-                #while op_neg == op:
-                #    op_neg = neg_operations[random.randint(0, len(neg_operations) - 1)]
-                #print("===================================================================")
-                #for res in example[op_neg]:
-                    #LATEX
-                #    formatted_examples.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": -1.0})
-                    #print(formatted_examples[-1])
 
         # create an evaluation entry for each example
-        id_example = 0
-        for example in tqdm(d_json[max_num_train_examples:], desc= dataset_path):
-            if id_example >= max_num_eval_examples:
-                break
-            #if example["var_count"] != 2:
-            #    continue
-            id_example += 1
+        for example in tqdm(d_json[max_num_train_examples: (max_num_train_examples + max_num_eval_examples)], desc= dataset_path):
             premise = example["premise"]
             for op in operations:
                 #POSITIVE EXAMPLES

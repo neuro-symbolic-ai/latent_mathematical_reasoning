@@ -107,7 +107,7 @@ class Experiment:
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
-            max_steps = 100
+            max_steps = 500
             scores_pos = []
             scores_neg = []
             logits_metric = []

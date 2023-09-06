@@ -5,15 +5,16 @@ import torch.nn.functional as F
 import numpy as np
 import math
 from torch.autograd import Variable
-
+from sentence_transformers import util
 
 
 class LatentReasoningSeq(nn.Module):
-    def __init__(self, n_tokens, n_operations, device, model_type = "transformer", one_hot = True):
+    def __init__(self, n_tokens, n_operations, device, model_type = "transformer", one_hot = True, loss_type = "mnr")):
         super(LatentReasoningSeq, self).__init__()
         self.device = device
         self.one_hot = one_hot
-        
+        self.loss_type = loss_type
+
         # Load encoder model
         if model_type == "transformer":
             self.encoder = TransformerModel(n_tokens, device).to(device)
@@ -32,8 +33,14 @@ class LatentReasoningSeq(nn.Module):
             self.ov = nn.Embedding(n_operations, self.dim)
             self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
         
-        self.similarity_fct = nn.functional.cosine_similarity
-        self.loss_function = nn.MSELoss()
+        # MSE Loss
+        if self.loss_type == "mse":
+            self.similarity_fct = nn.functional.cosine_similarity
+            self.loss_function = nn.MSELoss()
+        # Multiple Negagitve Ranking Loss
+        elif self.loss_type == "mnr":
+            self.similarity_fct = util.cos_sim #compute similarity for each possible pair in (a, b)
+            self.loss_function = nn.CrossEntropyLoss()
 
         
     def forward(self, equation1, equation2, target_equation, operation, labels):
@@ -58,7 +65,12 @@ class LatentReasoningSeq(nn.Module):
 
         #COMPUTE LOSS
         scores = self.similarity_fct(embeddings_output, embeddings_target)
-        labels = labels.to(self.device)
+
+        if self.loss_type == "mse":
+            labels = labels.to(self.device)
+        elif self.loss_type == "mnr":
+            labels = torch.tensor(range(len(scores)), dtype=torch.long, device=scores.device)  # Example a[i] should match with b[i]
+            
         loss = self.loss_function(scores, labels)
 
         return loss, scores, labels
