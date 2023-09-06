@@ -5,10 +5,10 @@ from datasets import Dataset
     
 class DataModel:
 
-    def __init__(self, neg = 1, do_train = True, do_test = False, tokenize_function_train = None, tokenize_function_eval = None srepr = False):
+    def __init__(self, neg = 1, do_train = True, do_test = False, tokenize_function_train = None, tokenize_function_eval = None, srepr = False):
         #PROCESS DATA
         self.tokenize_function_train = tokenize_function_train
-        self.tokenize_function_eval = tokenize_function_train
+        self.tokenize_function_eval = tokenize_function_eval
         #training data needs to be processed for operations and setup
         self.train_dataset, self.eval_dataset = self.process_dataset(neg = neg, srepr = srepr) #dataset_path = ["data/differentiation.json", "data/integration.json"])
         self.eval_dict = {}
@@ -67,7 +67,7 @@ class DataModel:
 
         # create an evaluation entry for each example
         id_example = 0
-        for example in tqdm(d_json[:max_num_train_examples], desc= dataset_path):
+        for example in tqdm(d_json[max_num_train_examples:], desc= dataset_path):
             if id_example >= max_num_eval_examples:
                 break
             #if example["var_count"] != 2:
@@ -83,10 +83,10 @@ class DataModel:
                     #print(formatted_examples[-1])
                 #NEGATIVE EXAMPLES
                 #select random operation for negative example
-                neg_operations = ["add", "minus", "times", "divide"]
-                op_neg = neg_operations[random.randint(0, len(neg_operations) - 1 )]
+                neg_operations = ["integrate", "differentiate"]
+                op_neg = random.choice(neg_operations)
                 while op_neg == op:
-                    op_neg = neg_operations[random.randint(0, len(neg_operations) - 1)]
+                    op_neg = random.choice(neg_operations)
                 #print("===================================================================")
                 negative_examples = []
                 for res in example[op_neg]:
@@ -94,7 +94,7 @@ class DataModel:
                     negative_examples.append(res["res"])
                     #print(formatted_examples[-1])
                 formatted_examples_eval.append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
-        
+                print(formatted_examples_eval[-1])
         #split randomly between train, dev, and test set
         
         #split randomly between train, dev, and test set

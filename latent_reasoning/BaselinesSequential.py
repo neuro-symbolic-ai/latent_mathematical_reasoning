@@ -47,14 +47,14 @@ class LatentReasoningSeq(nn.Module):
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
         embeddings_eq1 = self.encoder(equation1)
         
-        equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        embeddings_eq2 = self.encoder(equation2)
+        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
+        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(features)
+        #features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
+        embeddings_output = self.linear(embeddings_eq1)
 
         #COMPUTE LOSS
         scores = self.similarity_fct(embeddings_output, embeddings_target)
@@ -78,14 +78,14 @@ class LatentReasoningSeq(nn.Module):
         else:
             embeddings_eq1 = prev_step
         
-        equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        embeddings_eq2 = self.encoder(equation2)
+        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
+        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(features)
+        #features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
+        embeddings_output = self.linear(embeddings_eq1)
 
         #COMPUTE SCORES
         scores = self.similarity_fct(embeddings_output, embeddings_target)

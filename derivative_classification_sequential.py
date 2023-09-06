@@ -54,6 +54,7 @@ class Experiment:
         examples["premise"] = self.tokenizer([examples["premise"]])[0]
         examples["positive"] = self.tokenizer(examples["positive"])
         examples["negative"] = self.tokenizer(examples["negative"]) 
+        return examples
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
@@ -69,7 +70,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         #TRAINING CYCLE
         print("Start training...")
-        eval_steps_cycle = 1000
+        eval_steps_cycle = 100
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -106,7 +107,7 @@ class Experiment:
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
-            max_steps = 1000
+            max_steps = 100
             scores_pos = []
             scores_neg = []
             logits_metric = []
@@ -119,13 +120,14 @@ class Experiment:
                 operation = eval_batch['operation']
                 for positive in positives:
                     score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
-                    scores_pos.append(score)
+                    scores_pos.append(score.detach().cpu().numpy()[0])
                 for negative in negatives:
                     score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
-                    scores_neg.append(score)
+                    scores_neg.append(score.detach().cpu().numpy()[0])
                 if eval_steps > max_steps:
                     break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])
+            eval_metrics = {}
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
