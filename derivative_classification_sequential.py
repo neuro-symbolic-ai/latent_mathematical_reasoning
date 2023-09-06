@@ -7,7 +7,7 @@ import evaluate
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from latent_reasoning.data_model import DataModel
+from latent_reasoning.data_model_new import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
@@ -24,7 +24,7 @@ class Experiment:
         self.trans = trans
         #LOAD DATA
         self.corpus = Corpus(self.max_length)
-        self.tokenizer = self.corpus.var_tokenizer
+        self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
@@ -81,10 +81,10 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                #if steps % eval_steps_cycle == 0:
-            self.model.eval()
-            self.evaluation()
-            self.model.train()
+                if steps % eval_steps_cycle == 0:
+                    self.model.eval()
+                    self.evaluation()
+                    self.model.train()
 
 
     def evaluation(self, batch_size = 4, save_best_model = True):
@@ -101,7 +101,7 @@ class Experiment:
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
-            max_steps = 500
+            max_steps = 1000
             scores_pos = []
             scores_neg = []
             logits_metric = []
@@ -132,8 +132,8 @@ class Experiment:
                         label_metric.append(0)
                     label_index += 1
                     batch_index += 1
-                #if eval_steps > max_steps:
-                #    break
+                if eval_steps > max_steps:
+                    break
             eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
