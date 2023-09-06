@@ -25,7 +25,7 @@ class Experiment:
         #LOAD DATA
         self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.tokenizer
-        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function)
+        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function_train, self.tokenize_function_eval)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
@@ -46,9 +46,14 @@ class Experiment:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path))
 
-    def tokenize_function(self, examples):
+    def tokenize_function_train(self, examples):
         examples["equation1"], examples["equation2"], examples["target"] = self.tokenizer([examples["equation1"], examples["equation2"], examples["target"]])
         return examples
+    
+    def tokenize_function_eval(self, examples):
+        examples["premise"] = self.tokenizer([examples["premise"]])[0]
+        examples["positive"] = self.tokenizer(examples["positive"])
+        examples["negative"] = self.tokenizer(examples["negative"]) 
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
@@ -87,7 +92,7 @@ class Experiment:
                     self.model.train()
 
 
-    def evaluation(self, batch_size = 4, save_best_model = True):
+    def evaluation(self, batch_size = 1, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -108,33 +113,19 @@ class Experiment:
             label_metric = []
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
                 eval_steps += 1
-                equation1 = eval_batch["equation1"]
-                equation2 = eval_batch["equation2"]
-                target = eval_batch["target"]
-                labels = eval_batch["label"]
+                premise = eval_batch["premise"]
+                positives = eval_batch["positive"]
+                negatives = eval_batch["negative"]
                 operation = eval_batch['operation']
-                outputs = self.model(equation1, equation2, target, operation, labels)
-                batch_index = 0
-                for score in outputs[1]:
-                    if score > 0.0:
-                        logits_metric.append(1)
-                    else:
-                        logits_metric.append(0)
-                    batch_index += 1
-                batch_index = 0
-                label_index = 0
-                for label in labels:
-                    if label == 1.0:
-                        scores_pos.append(outputs[1].detach().cpu().numpy()[label_index])
-                        label_metric.append(1)
-                    else:
-                        scores_neg.append(outputs[1].detach().cpu().numpy()[label_index])
-                        label_metric.append(0)
-                    label_index += 1
-                    batch_index += 1
+                for positive in positives:
+                    score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
+                    scores_pos.append(score)
+                for negative in negatives:
+                    score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
+                    scores_neg.append(score)
                 if eval_steps > max_steps:
                     break
-            eval_metrics = self.compute_metrics([logits_metric, label_metric])
+            #eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score

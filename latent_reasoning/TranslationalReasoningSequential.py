@@ -71,10 +71,6 @@ class TransLatentReasoningSeq(nn.Module):
             
         loss = self.loss_function(scores, labels)
 
-        print(loss)
-        print(labels.size(), labels)
-        print(scores.size(), scores)
-
         return loss, scores, labels
 
 
@@ -90,14 +86,14 @@ class TransLatentReasoningSeq(nn.Module):
         else:
             embeddings_eq1 = prev_step
         
-        equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        embeddings_eq2 = self.encoder(equation2)
+        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
+        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(features)
+        #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
+        embeddings_output = self.linear(embeddings_eq1)
 
         #TRANSLATIONAL MODEL
         embeddings_output = embeddings_output * Wo
