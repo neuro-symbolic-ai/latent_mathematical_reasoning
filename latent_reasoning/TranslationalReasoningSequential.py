@@ -5,7 +5,7 @@ import torch.nn.functional as F
 import numpy as np
 import math
 from torch.autograd import Variable
-from SentenceTransformer import util
+from sentence_transformers import util
 
 
 
@@ -13,7 +13,7 @@ class TransLatentReasoningSeq(nn.Module):
     def __init__(self, n_tokens, n_operations, device, model_type = "transformer", loss_type = "mnr"):
         super(TransLatentReasoningSeq, self).__init__()
         self.device = device
-        self.loss_type loss_type
+        self.loss_type = loss_type
         
         # Load encoder model
         if model_type == "transformer":
@@ -70,6 +70,10 @@ class TransLatentReasoningSeq(nn.Module):
             labels = torch.tensor(range(len(scores)), dtype=torch.long, device=scores.device)  # Example a[i] should match with b[i]
             
         loss = self.loss_function(scores, labels)
+
+        print(loss)
+        print(labels.size(), labels)
+        print(scores.size(), scores)
 
         return loss, scores, labels
 

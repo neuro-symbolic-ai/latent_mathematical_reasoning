@@ -7,7 +7,7 @@ import evaluate
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
-from latent_reasoning.data_model_new import DataModel
+from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
@@ -182,7 +182,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True
