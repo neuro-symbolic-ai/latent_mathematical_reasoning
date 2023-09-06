@@ -9,7 +9,7 @@ from sentence_transformers import util
 
 
 class LatentReasoningSeq(nn.Module):
-    def __init__(self, n_tokens, n_operations, device, model_type = "transformer", one_hot = True, loss_type = "mnr")):
+    def __init__(self, n_tokens, n_operations, device, model_type = "transformer", one_hot = True, loss_type = "mnr"):
         super(LatentReasoningSeq, self).__init__()
         self.device = device
         self.one_hot = one_hot
@@ -26,10 +26,10 @@ class LatentReasoningSeq(nn.Module):
         self.dim = self.encoder.ninp
         
         if self.one_hot:
-            self.linear = nn.Linear(n_operations + self.dim * 3, self.dim).to(device)
+            self.linear = nn.Linear(n_operations + self.dim, self.dim).to(device)
             self.ov = F.one_hot(torch.arange(n_operations)).to(device)
         else:
-            self.linear = nn.Linear(self.dim*4, self.dim).to(device)
+            self.linear = nn.Linear(self.dim, self.dim).to(device)
             self.ov = nn.Embedding(n_operations, self.dim)
             self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
         
@@ -60,8 +60,8 @@ class LatentReasoningSeq(nn.Module):
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        #features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(embeddings_eq1)
+        features = torch.cat([ov, embeddings_eq1], 1)
+        embeddings_output = self.linear(features)
 
         #COMPUTE LOSS
         scores = self.similarity_fct(embeddings_output, embeddings_target)
@@ -96,13 +96,13 @@ class LatentReasoningSeq(nn.Module):
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        #features = torch.cat([ov, embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(embeddings_eq1)
+        features = torch.cat([ov, embeddings_eq1], 1)
+        embeddings_output = self.linear(features)
 
         #COMPUTE SCORES
-        scores = self.similarity_fct(embeddings_output, embeddings_target)
+        scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)
 
-        return scores, embeddings_output - ov
+        return scores, embeddings_output
 
 
 # ============================================ RNN ENCODER ================================================

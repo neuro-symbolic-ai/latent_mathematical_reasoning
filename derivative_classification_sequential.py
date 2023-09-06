@@ -124,6 +124,7 @@ class Experiment:
                 for negative in negatives:
                     score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
                     scores_neg.append(score.detach().cpu().numpy()[0])
+                #COMPUTE EVALUATION SCORES FOR RANKING
                 if eval_steps > max_steps:
                     break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])

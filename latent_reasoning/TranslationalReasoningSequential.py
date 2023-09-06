@@ -100,7 +100,7 @@ class TransLatentReasoningSeq(nn.Module):
         embeddings_target = embeddings_target + ov
 
         #COMPUTE SCORES
-        scores = self.similarity_fct(embeddings_output, embeddings_target)
+        scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)
 
         return scores, embeddings_output - ov
 
