@@ -110,9 +110,12 @@ class Experiment:
             max_steps = 500
             scores_pos = []
             scores_neg = []
-            logits_metric = []
-            label_metric = []
+            hit_1 = []
+            hit_3 = []
+            hit_5 = []
+            id_example = 0
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
+                scores_examples = {}
                 eval_steps += 1
                 premise = eval_batch["premise"]
                 positives = eval_batch["positive"]
@@ -120,15 +123,42 @@ class Experiment:
                 operation = eval_batch['operation']
                 for positive in positives:
                     score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
-                    scores_pos.append(score.detach().cpu().numpy()[0])
+                    score = score.detach().cpu().numpy()[0]
+                    scores_pos.append(score)
+                    scores_examples["pos_" + str(id_example)] = score
+                    id_example += 1
                 for negative in negatives:
                     score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
-                    scores_neg.append(score.detach().cpu().numpy()[0])
+                    score = score.detach().cpu().numpy()[0]
+                    scores_neg.append(score)
+                    scores_examples["neg_" + str(id_example)] = score
+                    id_example += 1
                 #COMPUTE EVALUATION SCORES FOR RANKING
+                print(scores_examples)
+                positive_hit = 1
+                for id_example in sorted(scores_examples.items(), key=lambda item: item[1]):
+                    if "pos" in id_example:
+                        break
+                    positive_hit += 1
+                if positive_hit <= 1:
+                    hit_1.append(1)
+                else:
+                    hit_1.append(0)
+                if positive_hit <= 3:
+                    hit_3.append(1)
+                else:
+                    hit_3.append(0)
+                if positive_hit <= 5:
+                    hit_5.append(1)
+                else:
+                    hit_5.append(0)
                 if eval_steps > max_steps:
                     break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics = {}
+            eval_metrics["hit@1"] = np.mean(hit_1)
+            eval_metrics["hit@3"] = np.mean(hit_3)
+            eval_metrics["hit@5"] = np.mean(hit_5)
             eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
