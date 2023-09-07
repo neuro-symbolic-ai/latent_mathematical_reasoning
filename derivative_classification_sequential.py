@@ -11,7 +11,8 @@ from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
-    
+from sklearn.metrics import average_precision_score#, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
+
 class Experiment:
 
     def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, load_model_path = None, do_train = True, do_test = False):
@@ -102,20 +103,25 @@ class Experiment:
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
-                self.eval_best_scores[dataset_name] = {"accuracy": 0.0, "f1": 0.0, "difference": 0.0}
+                self.eval_best_scores[dataset_name] = {"difference": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
             eval_steps = 0
-            max_steps = 500
-            scores_pos = []
-            scores_neg = []
+            max_steps = 100
+            avg_diff = []
             hit_1 = []
             hit_3 = []
             hit_5 = []
-            id_example = 0
+            ndcg_res = []
+            map_res = []
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
                 scores_examples = {}
+                scores_pos = []
+                scores_neg = []
+                true_relevance = []
+                relevance_scores = []
+                count_example = 0
                 eval_steps += 1
                 premise = eval_batch["premise"]
                 positives = eval_batch["positive"]
@@ -125,18 +131,27 @@ class Experiment:
                     score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
                     score = score.detach().cpu().numpy()[0]
                     scores_pos.append(score)
-                    scores_examples["pos_" + str(id_example)] = score
-                    id_example += 1
+                    scores_examples["pos_" + str(count_example)] = score
+                    count_example += 1
+                    true_relevance.append(1)
+                    relevance_scores.append(score)
                 for negative in negatives:
                     score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
                     score = score.detach().cpu().numpy()[0]
                     scores_neg.append(score)
-                    scores_examples["neg_" + str(id_example)] = score
-                    id_example += 1
+                    scores_examples["neg_" + str(count_example)] = score
+                    count_example += 1
+                    true_relevance.append(0)
+                    relevance_scores.append(score)
                 #COMPUTE EVALUATION SCORES FOR RANKING
-                print(scores_examples)
+                #print(true_relevance, relevance_scores)
+                #ndcg_res.append(ndcg_score(true_relevance, relevance_scores))
+                map_res.append(average_precision_score(true_relevance, relevance_scores))
+                avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
+                sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
+                #print(sorted_scores)
                 positive_hit = 1
-                for id_example in sorted(scores_examples.items(), key=lambda item: item[1]):
+                for id_example in sorted_scores:
                     if "pos" in id_example:
                         break
                     positive_hit += 1
@@ -156,10 +171,12 @@ class Experiment:
                     break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics = {}
+            #eval_metrics["ndgc"] = np.mean(ndcg_res)
+            eval_metrics["avg precision"] = np.mean(map_res)
             eval_metrics["hit@1"] = np.mean(hit_1)
             eval_metrics["hit@3"] = np.mean(hit_3)
             eval_metrics["hit@5"] = np.mean(hit_5)
-            eval_metrics["difference"] = np.mean(scores_pos) - np.mean(scores_neg)
+            eval_metrics["difference"] = np.mean(avg_diff)
             if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
                 #new best score
                 self.eval_best_scores[loader] = eval_metrics
@@ -169,8 +186,6 @@ class Experiment:
                     torch.save(self.model.state_dict(), PATH)
             #print results
             print("=============="+loader+"==============")
-            print("positive avg sim:", np.mean(scores_pos))
-            print("negative avg sim:", np.mean(scores_neg))
             print("current scores:", eval_metrics)
             print("best scores:", self.eval_best_scores[loader])
 
@@ -180,7 +195,7 @@ if __name__ == '__main__':
                     help="Which dataset to use")
     parser.add_argument("--model", type=str, default="transformer", nargs="?",
                     help="Which model to use")
-    parser.add_argument("--batch_size", type=int, default=8, nargs="?",
+    parser.add_argument("--batch_size", type=int, default=16, nargs="?",
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
@@ -206,7 +221,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True

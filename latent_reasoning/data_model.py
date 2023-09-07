@@ -60,19 +60,20 @@ class DataModel:
                     #print(formatted_examples[-1])
                 #NEGATIVE EXAMPLES
                 #select random operation for negative example
-                neg_operations = ["integrate", "differentiate"]
-                op_neg = random.choice(neg_operations)
-                while op_neg == op:
-                    op_neg = random.choice(neg_operations)
+                neg_operations = operations
+                #op_neg = random.choice(neg_operations)
+                #while op_neg == op:
+                #    op_neg = random.choice(neg_operations)
                 #print("===================================================================")
                 negative_examples = []
-                for res in example[op_neg]:
-                    #LATEX
-                    negative_examples.append(res["res"])
-                    #print(formatted_examples[-1])
+                for op_neg in neg_operations:
+                    if op_neg == op:
+                        continue
+                    for res in example[op_neg]:
+                        #LATEX
+                        negative_examples.append(res["res"])
+                        #print(formatted_examples[-1])
                 formatted_examples_eval.append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
-                print(formatted_examples_eval[-1])
-        #split randomly between train, dev, and test set
         
         #split randomly between train, dev, and test set
         dataset_train = Dataset.from_list(formatted_examples_train)

@@ -20,7 +20,7 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, max_len = 128, min_vars_n = 10):
+    def __init__(self, max_len = 128, min_vars_n = 0):
         self.dictionary = Dictionary()
         # padding
         self.dictionary.add_word("[PAD]")
