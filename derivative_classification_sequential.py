@@ -122,7 +122,7 @@ class Experiment:
                 true_relevance = []
                 relevance_scores = []
                 count_example = 0
-                eval_steps += 1
+                eval_steps += 1                
                 premise = eval_batch["premise"]
                 positives = eval_batch["positive"]
                 negatives = eval_batch["negative"]
@@ -195,7 +195,7 @@ if __name__ == '__main__':
                     help="Which dataset to use")
     parser.add_argument("--model", type=str, default="transformer", nargs="?",
                     help="Which model to use")
-    parser.add_argument("--batch_size", type=int, default=16, nargs="?",
+    parser.add_argument("--batch_size", type=int, default=32, nargs="?",
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
