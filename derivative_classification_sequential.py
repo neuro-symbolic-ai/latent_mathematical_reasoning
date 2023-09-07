@@ -90,11 +90,11 @@ class Experiment:
                 #evaluation
                 if steps % eval_steps_cycle == 0:
                     self.model.eval()
-                    self.evaluation()
+                    self.evaluation(steps)
                     self.model.train()
 
 
-    def evaluation(self, batch_size = 1, save_best_model = True):
+    def evaluation(self, training_step, batch_size = 1, save_best_model = True):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -185,7 +185,7 @@ class Experiment:
                     PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
                     torch.save(self.model.state_dict(), PATH)
             #print results
-            print("=============="+loader+"==============")
+            print("=============="+loader+"_"+str(training_step)+"==============")
             print("current scores:", eval_metrics)
             print("best scores:", self.eval_best_scores[loader])
 
@@ -199,9 +199,9 @@ if __name__ == '__main__':
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=int, default=12, nargs="?",
+    parser.add_argument("--epochs", type=int, default=3, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-3, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
