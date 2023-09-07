@@ -71,7 +71,7 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         #TRAINING CYCLE
         print("Start training...")
-        eval_steps_cycle = 100
+        eval_steps_cycle = 2000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -167,8 +167,8 @@ class Experiment:
                     hit_5.append(1)
                 else:
                     hit_5.append(0)
-                if eval_steps > max_steps:
-                    break
+                #if eval_steps > max_steps:
+                #    break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics = {}
             #eval_metrics["ndgc"] = np.mean(ndcg_res)
@@ -221,7 +221,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True

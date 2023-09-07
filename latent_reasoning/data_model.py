@@ -37,7 +37,7 @@ class DataModel:
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
         max_num_train_examples = 4000
-        max_num_eval_examples = 2000
+        max_num_eval_examples = 1000
         # create a training entry for each example
         for example in tqdm(d_json[:max_num_train_examples], desc= dataset_path):
             premise = example["premise"]
