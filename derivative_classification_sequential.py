@@ -167,8 +167,8 @@ class Experiment:
                     hit_5.append(1)
                 else:
                     hit_5.append(0)
-                #if eval_steps > max_steps:
-                #    break
+                if eval_steps > max_steps:
+                    break
             #eval_metrics = self.compute_metrics([logits_metric, label_metric])
             eval_metrics = {}
             #eval_metrics["ndgc"] = np.mean(ndcg_res)
@@ -201,7 +201,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=3, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-3, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")

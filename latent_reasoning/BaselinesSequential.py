@@ -30,8 +30,9 @@ class LatentReasoningSeq(nn.Module):
             self.ov = F.one_hot(torch.arange(n_operations)).to(device)
         else:
             self.linear = nn.Linear(self.dim*2, self.dim).to(device)
-            self.ov = nn.Embedding(n_operations, self.dim)
-            self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
+            self.ov = nn.Embedding(n_operations, self.dim, device = device)
+            self.ov.weight.data = (torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
+            #self.Wo = torch.nn.Parameter(torch.tensor(np.random.uniform(-1,1, (n_operations, self.dim)), dtype=torch.float, requires_grad = True, device=self.device))
         
         # MSE Loss
         if self.loss_type == "mse":
@@ -48,7 +49,7 @@ class LatentReasoningSeq(nn.Module):
         if self.one_hot:
             ov = self.ov[operation]
         else:
-            ov = self.ov.weight[operation]
+            ov = self.ov(operation.to(self.device))
 
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
@@ -59,8 +60,12 @@ class LatentReasoningSeq(nn.Module):
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
+        
+        if self.one_hot:
+            features = torch.cat([ov, embeddings_eq1], 1)
+        else:
+            features = torch.cat([ov, embeddings_eq1], 1)
 
-        features = torch.cat([ov, embeddings_eq1], 1)
         embeddings_output = self.linear(features)
 
         #COMPUTE LOSS
@@ -81,7 +86,7 @@ class LatentReasoningSeq(nn.Module):
         if self.one_hot:
             ov = self.ov[operation]
         else:
-            ov = self.ov.weight[operation]
+            ov = self.ov(operation.to(self.device))
 
         # ENCODE EQUATIONS
         if equation1 != None:
@@ -258,7 +263,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 1048, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 1024, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer

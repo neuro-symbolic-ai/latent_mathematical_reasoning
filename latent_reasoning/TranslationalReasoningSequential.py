@@ -26,8 +26,8 @@ class TransLatentReasoningSeq(nn.Module):
         self.dim = self.encoder.ninp
         self.linear = nn.Linear(self.dim, self.dim).to(device) #*3
         
-        self.ov = nn.Embedding(n_operations, self.dim)
-        self.ov.weight.data = (1e-3 * torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
+        self.ov = nn.Embedding(n_operations, self.dim, device = device)
+        self.ov.weight.data = (torch.randn((n_operations, self.dim), dtype=torch.float, device = device))
         self.Wo = torch.nn.Parameter(torch.tensor(np.random.uniform(-1,1, (n_operations, self.dim)), dtype=torch.float, requires_grad=True, device=self.device))
         
         # MSE Loss
@@ -42,7 +42,7 @@ class TransLatentReasoningSeq(nn.Module):
     def forward(self, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
         Wo = self.Wo[operation]
-        ov = self.ov.weight[operation]
+        ov = self.ov(operation.to(self.device))
 
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
@@ -77,7 +77,7 @@ class TransLatentReasoningSeq(nn.Module):
     def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
         Wo = self.Wo[operation]
-        ov = self.ov.weight[operation]
+        ov = self.ov(operation.to(self.device))
 
         # ENCODE EQUATIONS
         if equation1 != None:
@@ -258,7 +258,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 1024, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 768, nhead = 6, nhid = 1024, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer
