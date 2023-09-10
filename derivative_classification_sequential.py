@@ -102,92 +102,109 @@ class Experiment:
         eval_loaders = {}
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
-            if not dataset_name in self.eval_best_scores:
+            if dataset_name == "dev_set":
+                self.eval_best_scores[dataset_name] = {"loss": float("inf")}
+            elif not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"difference": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
-            eval_steps = 0
-            max_steps = 100
-            avg_diff = []
-            hit_1 = []
-            hit_3 = []
-            hit_5 = []
-            ndcg_res = []
-            map_res = []
-            for eval_batch in tqdm(eval_loaders[loader], desc = loader):
-                scores_examples = {}
-                scores_pos = []
-                scores_neg = []
-                true_relevance = []
-                relevance_scores = []
-                count_example = 0
-                eval_steps += 1                
-                premise = eval_batch["premise"]
-                positives = eval_batch["positive"]
-                negatives = eval_batch["negative"]
-                operation = eval_batch['operation']
-                for positive in positives:
-                    score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
-                    score = score.detach().cpu().numpy()[0]
-                    scores_pos.append(score)
-                    scores_examples["pos_" + str(count_example)] = score
-                    count_example += 1
-                    true_relevance.append(1)
-                    relevance_scores.append(score)
-                for negative in negatives:
-                    score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
-                    score = score.detach().cpu().numpy()[0]
-                    scores_neg.append(score)
-                    scores_examples["neg_" + str(count_example)] = score
-                    count_example += 1
-                    true_relevance.append(0)
-                    relevance_scores.append(score)
-                #COMPUTE EVALUATION SCORES FOR RANKING
-                #print(true_relevance, relevance_scores)
-                #ndcg_res.append(ndcg_score(true_relevance, relevance_scores))
-                map_res.append(average_precision_score(true_relevance, relevance_scores))
-                avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
-                sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
-                #print(sorted_scores)
-                positive_hit = 1
-                for id_example in sorted_scores:
-                    if "pos" in id_example:
+            if loader == "dev_set":
+                losses = []
+                for eval_batch in tqdm(eval_loaders[loader], desc = loader):
+                    equation1 = eval_batch["equation1"]
+                    equation2 = eval_batch["equation2"]
+                    target = eval_batch["target"]
+                    labels = eval_batch['label']
+                    operation = eval_batch['operation']
+                    loss = self.model(equation1, equation2, target, operation, labels)[0]
+                    losses.append(loss)
+                eval_metrics = {}
+                eval_metrics["loss"] = np.mean(losses)
+                if eval_metrics["loss"] > self.eval_best_scores[loader]["loss"]:
+                    #new best score
+                    print("...Save the model...")
+                    self.eval_best_scores[loader] = eval_metrics
+                    #SAVE THE MODEL'S PARAMETERS
+                    # TODO SAVE VOCABULARY!
+                    if save_best_model:
+                        PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
+                        torch.save(self.model.state_dict(), PATH)
+            else:
+                eval_steps = 0
+                max_steps = 100
+                avg_diff = []
+                hit_1 = []
+                hit_3 = []
+                hit_5 = []
+                ndcg_res = []
+                map_res = []
+                for eval_batch in tqdm(eval_loaders[loader], desc = loader):
+                    scores_examples = {}
+                    scores_pos = []
+                    scores_neg = []
+                    true_relevance = []
+                    relevance_scores = []
+                    count_example = 0
+                    eval_steps += 1                
+                    premise = eval_batch["premise"]
+                    positives = eval_batch["positive"]
+                    negatives = eval_batch["negative"]
+                    operation = eval_batch['operation']
+                    for positive in positives:
+                        score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
+                        score = score.detach().cpu().numpy()[0]
+                        scores_pos.append(score)
+                        scores_examples["pos_" + str(count_example)] = score
+                        count_example += 1
+                        true_relevance.append(1)
+                        relevance_scores.append(score)
+                    for negative in negatives:
+                        score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
+                        score = score.detach().cpu().numpy()[0]
+                        scores_neg.append(score)
+                        scores_examples["neg_" + str(count_example)] = score
+                        count_example += 1
+                        true_relevance.append(0)
+                        relevance_scores.append(score)
+                    #COMPUTE EVALUATION SCORES FOR RANKING
+                    #print(true_relevance, relevance_scores)
+                    #ndcg_res.append(ndcg_score(true_relevance, relevance_scores))
+                    map_res.append(average_precision_score(true_relevance, relevance_scores))
+                    avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
+                    sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
+                    #print(sorted_scores)
+                    positive_hit = 1
+                    for id_example in sorted_scores:
+                        if "pos" in id_example:
+                            break
+                        positive_hit += 1
+                    if positive_hit <= 1:
+                        hit_1.append(1)
+                    else:
+                        hit_1.append(0)
+                    if positive_hit <= 3:
+                        hit_3.append(1)
+                    else:
+                        hit_3.append(0)
+                    if positive_hit <= 5:
+                        hit_5.append(1)
+                    else:
+                        hit_5.append(0)
+                    if eval_steps > max_steps:
                         break
-                    positive_hit += 1
-                if positive_hit <= 1:
-                    hit_1.append(1)
-                else:
-                    hit_1.append(0)
-                if positive_hit <= 3:
-                    hit_3.append(1)
-                else:
-                    hit_3.append(0)
-                if positive_hit <= 5:
-                    hit_5.append(1)
-                else:
-                    hit_5.append(0)
-                if eval_steps > max_steps:
-                    break
-            #eval_metrics = self.compute_metrics([logits_metric, label_metric])
-            eval_metrics = {}
-            #eval_metrics["ndgc"] = np.mean(ndcg_res)
-            eval_metrics["avg precision"] = np.mean(map_res)
-            eval_metrics["hit@1"] = np.mean(hit_1)
-            eval_metrics["hit@3"] = np.mean(hit_3)
-            eval_metrics["hit@5"] = np.mean(hit_5)
-            eval_metrics["difference"] = np.mean(avg_diff)
-            if eval_metrics["difference"] > self.eval_best_scores[loader]["difference"]:
-                #new best score
-                self.eval_best_scores[loader] = eval_metrics
-                #SAVE THE MODEL'S PARAMETERS
-                if save_best_model:
-                    PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
-                    torch.save(self.model.state_dict(), PATH)
-            #print results
-            print("=============="+loader+"_"+str(training_step)+"==============")
-            print("current scores:", eval_metrics)
-            print("best scores:", self.eval_best_scores[loader])
+                #eval_metrics = self.compute_metrics([logits_metric, label_metric])
+                eval_metrics = {}
+                #eval_metrics["ndgc"] = np.mean(ndcg_res)
+                eval_metrics["avg precision"] = np.mean(map_res)
+                eval_metrics["hit@1"] = np.mean(hit_1)
+                eval_metrics["hit@3"] = np.mean(hit_3)
+                eval_metrics["hit@5"] = np.mean(hit_5)
+                eval_metrics["difference"] = np.mean(avg_diff)
+                #print results
+                print("=============="+loader+"_"+str(training_step)+"==============")
+                print("current scores:", eval_metrics)
+                print("best scores:", self.eval_best_scores[loader])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
