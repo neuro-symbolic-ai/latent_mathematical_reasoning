@@ -159,7 +159,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 768, nhead = 6, nhid = 1024, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 1024, nlayers = 6, dropout=0.1):
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer

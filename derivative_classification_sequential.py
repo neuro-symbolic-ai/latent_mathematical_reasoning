@@ -1,3 +1,4 @@
+import os
 import json
 import pickle
 import argparse
@@ -16,7 +17,7 @@ from sklearn.metrics import average_precision_score #, precision_recall_curve, n
 
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, load_model_path = None, do_train = True, do_test = False):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, one_hot = False, load_model_path = None, do_train = True, do_test = False):
         self.model_type = model
         print("Model:", self.model_type)
         self.epochs = epochs
@@ -24,6 +25,7 @@ class Experiment:
         self.max_length = max_length
         self.batch_size = batch_size
         self.trans = trans
+        self.one_hot = one_hot
         #LOAD DATA
         self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.tokenizer
@@ -89,10 +91,10 @@ class Experiment:
                 loss.backward()
                 optim.step()
                 #evaluation
-                if steps % eval_steps_cycle == 0:
-                    self.model.eval()
-                    self.evaluation(steps)
-                    self.model.train()
+                #if steps % eval_steps_cycle == 0:
+            self.model.eval()
+            self.evaluation(steps)
+            self.model.train()
 
 
     def evaluation(self, training_step, batch_size = 1, save_best_model = True):
@@ -131,18 +133,20 @@ class Experiment:
                 eval_metrics[loader]["loss"] = np.mean(losses)
                 if eval_metrics[loader]["loss"] < self.eval_best_scores[loader]["loss"]:
                     #new best score
-                    print("...Save best model...")
+                    print("New best model...Save!!!")
                     self.eval_best_scores = eval_metrics
                     #SAVE THE MODEL'S PARAMETERS
                     # TODO SAVE VOCABULARY!
                     if save_best_model:
-                        PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.num_ops) + self.model.dim + "/"
+                        PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
+                        if not os.path.exists(PATH):
+                            os.makedirs(PATH)
                         #save model parameters
                         torch.save(self.model.state_dict(), PATH + "state_dict.pt")
                         #save vocabulary
                         pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
                         #save operations dictionary
-                        pickle.dump(self.operations_voc open(PATH + "operations", "wb"))
+                        pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
                 print("===========Best Model==========")
                 print(self.eval_best_scores)
             else:
@@ -185,9 +189,10 @@ class Experiment:
                         relevance_scores.append(score)
                     #COMPUTE EVALUATION SCORES FOR RANKING
                     ap_score = average_precision_score(true_relevance, relevance_scores)
-                    if not operation in map_ops:
-                        map_ops[operation] = []
-                    map_ops[operation].append(ap_score)
+                    op_name = self.operations_voc[int(operation[0])]
+                    if not op_name in map_ops:
+                        map_ops[op_name] = []
+                    map_ops[op_name].append(ap_score)
                     map_res.append(ap_score)
                     avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
                     sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
@@ -208,8 +213,8 @@ class Experiment:
                         hit_5.append(1)
                     else:
                         hit_5.append(0)
-                    if eval_steps > max_steps:
-                        break
+                    #if eval_steps > max_steps:
+                    #    break
                 eval_metrics[loader]["map"] = np.mean(map_res)
                 eval_metrics[loader]["hit@1"] = np.mean(hit_1)
                 eval_metrics[loader]["hit@3"] = np.mean(hit_3)
@@ -221,7 +226,7 @@ class Experiment:
                 #print results
                 print("=============="+loader+"_"+str(training_step)+"==============")
                 print("current scores:", eval_metrics[loader])
-                print("prev best scores:", self.eval_best_scores[loader])
+                #print("prev best scores:", self.eval_best_scores[loader])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -233,7 +238,7 @@ if __name__ == '__main__':
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=int, default=3, nargs="?",
+    parser.add_argument("--epochs", type=int, default=8, nargs="?",
                     help="Num epochs.")
     parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
@@ -255,7 +260,8 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
+            one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True
