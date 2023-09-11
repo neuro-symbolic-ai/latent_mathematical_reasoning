@@ -100,15 +100,22 @@ class Experiment:
             return
         #BUILD DATALOADER FOR EVALUATION
         eval_loaders = {}
+        eval_metrics = {}
+        test_batch_size = batch_size
         for dataset_name in self.eval_dict:
-            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
+            batch_size = test_batch_size
             if dataset_name == "dev_set":
+                #set train batch size
+                batch_size = self.batch_size
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
+            if dataset_name == "dev_set" and not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"loss": float("inf")}
             elif not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"difference": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
+            eval_metrics[loader] = {}
             if loader == "dev_set":
                 losses = []
                 for eval_batch in tqdm(eval_loaders[loader], desc = loader):
@@ -118,18 +125,20 @@ class Experiment:
                     labels = eval_batch['label']
                     operation = eval_batch['operation']
                     loss = self.model(equation1, equation2, target, operation, labels)[0]
-                    losses.append(loss)
-                eval_metrics = {}
-                eval_metrics["loss"] = np.mean(losses)
-                if eval_metrics["loss"] > self.eval_best_scores[loader]["loss"]:
+                    losses.append(loss.detach().cpu().numpy())
+                #eval_metrics = {}
+                eval_metrics[loader]["loss"] = np.mean(losses)
+                if eval_metrics[loader]["loss"] < self.eval_best_scores[loader]["loss"]:
                     #new best score
-                    print("...Save the model...")
-                    self.eval_best_scores[loader] = eval_metrics
+                    print("...Save best model...")
+                    self.eval_best_scores = eval_metrics
                     #SAVE THE MODEL'S PARAMETERS
                     # TODO SAVE VOCABULARY!
                     if save_best_model:
                         PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
                         torch.save(self.model.state_dict(), PATH)
+                print("===========Best Model==========")
+                print(self.eval_best_scores)
             else:
                 eval_steps = 0
                 max_steps = 100
@@ -194,17 +203,17 @@ class Experiment:
                     if eval_steps > max_steps:
                         break
                 #eval_metrics = self.compute_metrics([logits_metric, label_metric])
-                eval_metrics = {}
+                #eval_metrics = {}
                 #eval_metrics["ndgc"] = np.mean(ndcg_res)
-                eval_metrics["avg precision"] = np.mean(map_res)
-                eval_metrics["hit@1"] = np.mean(hit_1)
-                eval_metrics["hit@3"] = np.mean(hit_3)
-                eval_metrics["hit@5"] = np.mean(hit_5)
-                eval_metrics["difference"] = np.mean(avg_diff)
+                eval_metrics[loader]["avg precision"] = np.mean(map_res)
+                eval_metrics[loader]["hit@1"] = np.mean(hit_1)
+                eval_metrics[loader]["hit@3"] = np.mean(hit_3)
+                eval_metrics[loader]["hit@5"] = np.mean(hit_5)
+                eval_metrics[loader]["difference"] = np.mean(avg_diff)
                 #print results
                 print("=============="+loader+"_"+str(training_step)+"==============")
-                print("current scores:", eval_metrics)
-                print("best scores:", self.eval_best_scores[loader])
+                print("current scores:", eval_metrics[loader])
+                print("prev best scores:", self.eval_best_scores[loader])
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -238,7 +247,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
             #do_test = True

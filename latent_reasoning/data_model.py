@@ -10,16 +10,16 @@ class DataModel:
         self.tokenize_function_train = tokenize_function_train
         self.tokenize_function_eval = tokenize_function_eval
         #training data needs to be processed for operations and setup
-        self.train_dataset, self.eval_dataset, self.test_dataset = self.process_dataset(neg = neg, srepr = srepr) #dataset_path = ["data/differentiation.json", "data/integration.json"])
+        self.train_dataset, self.dev_dataset, self.test_dataset = self.process_dataset(neg = neg, srepr = srepr) #dataset_path = ["data/differentiation.json", "data/integration.json"])
         self.eval_dict = {}
         self.tokenized_train_dataset = self.train_dataset.map(self.tokenize_function_train, batched=False)
         self.tokenized_dev_dataset = self.dev_dataset.map(self.tokenize_function_train, batched=False)
         self.tokenized_test_dataset_cross = self.test_dataset["cross_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.tokenized_test_dataset_in = self.test_dataset["in_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.train_dataset = self.tokenized_train_dataset
+        self.eval_dict["cross_operation_negatives"] = self.tokenized_test_dataset_cross
+        self.eval_dict["in_operation_negatives"] = self.tokenized_test_dataset_in
         self.eval_dict["dev_set"] = self.tokenized_dev_dataset
-        self.eval_dict["cross_operation_negatives"] = tokenized_test_dataset_cross
-        self.eval_dict["in_operation_negatives"] = tokenized_test_dataset_in
 
     def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
@@ -34,12 +34,12 @@ class DataModel:
 
         #convert dataset into json for dataset loader
         formatted_examples_train = []
-        formatted_examples_eval = []
+        formatted_examples_dev = []
         formatted_examples_test = {"cross_operation_negatives":[], "in_operation_negatives":[]}
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
         max_train_examples = 5000
-        max_dev_examples = 2000
+        max_dev_examples = 1000
         max_test_examples = 300
 
         # create a training and dev set entry for each example
