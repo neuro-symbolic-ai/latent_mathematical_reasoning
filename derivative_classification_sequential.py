@@ -1,4 +1,5 @@
 import json
+import pickle
 import argparse
 import torch
 import numpy as np
@@ -11,7 +12,7 @@ from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
-from sklearn.metrics import average_precision_score#, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
+from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
 
 class Experiment:
 
@@ -30,7 +31,7 @@ class Experiment:
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         self.operations_voc = self.data_model.operations_voc
-        print("Vocabulary: ", self.corpus.dictionary.word2idx)
+        self.vocabulary = self.corpus.dictionary.word2idx
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
@@ -135,19 +136,25 @@ class Experiment:
                     #SAVE THE MODEL'S PARAMETERS
                     # TODO SAVE VOCABULARY!
                     if save_best_model:
-                        PATH = "models/" + self.model_type + "_best_" + loader + "_" + str(self.trans) + "_" + str(self.num_ops) + ".pt"
-                        torch.save(self.model.state_dict(), PATH)
+                        PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.num_ops) + self.model.dim + "/"
+                        #save model parameters
+                        torch.save(self.model.state_dict(), PATH + "state_dict.pt")
+                        #save vocabulary
+                        pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
+                        #save operations dictionary
+                        pickle.dump(self.operations_voc open(PATH + "operations", "wb"))
                 print("===========Best Model==========")
                 print(self.eval_best_scores)
             else:
+                # TODO optimize for variable batch size
                 eval_steps = 0
                 max_steps = 100
                 avg_diff = []
                 hit_1 = []
                 hit_3 = []
                 hit_5 = []
-                ndcg_res = []
                 map_res = []
+                map_ops = {}
                 for eval_batch in tqdm(eval_loaders[loader], desc = loader):
                     scores_examples = {}
                     scores_pos = []
@@ -177,12 +184,13 @@ class Experiment:
                         true_relevance.append(0)
                         relevance_scores.append(score)
                     #COMPUTE EVALUATION SCORES FOR RANKING
-                    #print(true_relevance, relevance_scores)
-                    #ndcg_res.append(ndcg_score(true_relevance, relevance_scores))
-                    map_res.append(average_precision_score(true_relevance, relevance_scores))
+                    ap_score = average_precision_score(true_relevance, relevance_scores)
+                    if not operation in map_ops:
+                        map_ops[operation] = []
+                    map_ops[operation].append(ap_score)
+                    map_res.append(ap_score)
                     avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
                     sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
-                    #print(sorted_scores)
                     positive_hit = 1
                     for id_example in sorted_scores:
                         if "pos" in id_example:
@@ -202,14 +210,14 @@ class Experiment:
                         hit_5.append(0)
                     if eval_steps > max_steps:
                         break
-                #eval_metrics = self.compute_metrics([logits_metric, label_metric])
-                #eval_metrics = {}
-                #eval_metrics["ndgc"] = np.mean(ndcg_res)
-                eval_metrics[loader]["avg precision"] = np.mean(map_res)
+                eval_metrics[loader]["map"] = np.mean(map_res)
                 eval_metrics[loader]["hit@1"] = np.mean(hit_1)
                 eval_metrics[loader]["hit@3"] = np.mean(hit_3)
                 eval_metrics[loader]["hit@5"] = np.mean(hit_5)
                 eval_metrics[loader]["difference"] = np.mean(avg_diff)
+                for op in map_ops:
+                    map_ops[op] = np.mean(map_ops[op])
+                eval_metrics[loader]["map_ops"] = map_ops
                 #print results
                 print("=============="+loader+"_"+str(training_step)+"==============")
                 print("current scores:", eval_metrics[loader])
