@@ -45,7 +45,7 @@ class Experiment:
             self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
+            self.model = LatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path))
@@ -234,13 +234,13 @@ if __name__ == '__main__':
                     help="Which dataset to use")
     parser.add_argument("--model", type=str, default="transformer", nargs="?",
                     help="Which model to use")
-    parser.add_argument("--batch_size", type=int, default=32, nargs="?",
+    parser.add_argument("--batch_size", type=int, default=64, nargs="?",
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=int, default=8, nargs="?",
+    parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-6, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
@@ -260,7 +260,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,

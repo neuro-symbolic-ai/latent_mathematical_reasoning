@@ -81,7 +81,8 @@ class DataModel:
                 
                 #IN-OPERATION NEGATIVE EXAMPLES
                 num_negs = 5
-                neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
+                #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
+                neg_index = max_train_examples + max_dev_examples + max_test_examples + 1
                 neg_premises = d_json[neg_index:neg_index+num_negs]
                 negative_examples = []
                 for neg in neg_premises:

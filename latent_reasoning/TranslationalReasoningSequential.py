@@ -56,7 +56,8 @@ class TransLatentReasoningSeq(nn.Module):
         embeddings_target = self.encoder(target_equation)
 
         #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(embeddings_eq1)
+        features = embeddings_eq1
+        embeddings_output = self.linear(features)
 
         #TRANSLATIONAL MODEL
         embeddings_output = embeddings_output * Wo
@@ -95,7 +96,8 @@ class TransLatentReasoningSeq(nn.Module):
         embeddings_target = self.encoder(target_equation)
 
         #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
-        embeddings_output = self.linear(embeddings_eq1)
+        features = embeddings_eq1
+        embeddings_output = self.linear(features)
 
         #TRANSLATIONAL MODEL
         embeddings_output = embeddings_output * Wo
