@@ -92,9 +92,14 @@ class Experiment:
                 optim.step()
                 #evaluation
                 #if steps % eval_steps_cycle == 0:
+            #DEV EVALUATION
             self.model.eval()
             self.evaluation(steps)
             self.model.train()
+        #FINAL TEST EVALUATION
+        self.model.eval()
+        self.evaluation(steps, eval_type = "test")
+        self.model.train()
 
 
     def evaluation(self, training_step, batch_size = 1, eval_type = "dev", save_best_model = True):
