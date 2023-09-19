@@ -123,7 +123,7 @@ class Experiment:
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
-            if not(eval_type == "dev" and loader == "dev_set") or not(eval_type == "test" and loader != "dev_set"):
+            if not(eval_type == "dev" and loader == "dev_set") and not(eval_type == "test" and loader != "dev_set"):
                 continue
             eval_metrics[loader] = {}    
             # TODO optimize for variable batch size
@@ -191,34 +191,34 @@ class Experiment:
                     hit_5.append(0)
                 #if eval_steps > max_steps:
                 #    break
-                eval_metrics[loader]["map"] = np.mean(map_res)
-                eval_metrics[loader]["hit@1"] = np.mean(hit_1)
-                eval_metrics[loader]["hit@3"] = np.mean(hit_3)
-                eval_metrics[loader]["hit@5"] = np.mean(hit_5)
-                eval_metrics[loader]["difference"] = np.mean(avg_diff)
-                for op in map_ops:
-                    map_ops[op] = np.mean(map_ops[op])
-                eval_metrics[loader]["map_ops"] = map_ops
-                #print results
-                print("=============="+loader+"_"+str(training_step)+"==============")
-                print("current scores:", eval_metrics[loader])
-                if eval_type == "dev" and eval_metrics[loader]["map"] >= self.eval_best_scores[loader]["map"]:
-                        #new best score
-                        print("New best model...Save!!!")
-                        self.eval_best_scores = eval_metrics
-                        #SAVE THE MODEL
-                        if save_best_model:
-                            PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
-                            if not os.path.exists(PATH):
-                                os.makedirs(PATH)
-                            #save model parameters
-                            torch.save(self.model.state_dict(), PATH + "state_dict.pt")
-                            #save vocabulary
-                            pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
-                            #save operations dictionary
-                            pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
-                    print("===========Best Model==========")
-                    print(self.eval_best_scores)
+            eval_metrics[loader]["map"] = np.mean(map_res)
+            eval_metrics[loader]["hit@1"] = np.mean(hit_1)
+            eval_metrics[loader]["hit@3"] = np.mean(hit_3)
+            eval_metrics[loader]["hit@5"] = np.mean(hit_5)
+            eval_metrics[loader]["difference"] = np.mean(avg_diff)
+            for op in map_ops:
+                map_ops[op] = np.mean(map_ops[op])
+            eval_metrics[loader]["map_ops"] = map_ops
+            #print results
+            print("=============="+loader+"_"+str(training_step)+"==============")
+            print("current scores:", eval_metrics[loader])
+            if eval_type == "dev" and eval_metrics[loader]["map"] >= self.eval_best_scores[loader]["map"]:
+                #new best score
+                print("New best model...Save!!!")
+                self.eval_best_scores = eval_metrics
+                #SAVE THE MODEL
+                if save_best_model:
+                    PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
+                    if not os.path.exists(PATH):
+                        os.makedirs(PATH)
+                    #save model parameters
+                    torch.save(self.model.state_dict(), PATH + "state_dict.pt")
+                    #save vocabulary
+                    pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
+                    #save operations dictionary
+                    pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
+                print("===========Best Model==========")
+                print(self.eval_best_scores)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -230,9 +230,9 @@ if __name__ == '__main__':
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=int, default=32, nargs="?",
+    parser.add_argument("--epochs", type=int, default=16, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-6, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-4, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
@@ -252,7 +252,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,

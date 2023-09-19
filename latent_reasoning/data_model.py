@@ -38,8 +38,8 @@ class DataModel:
         formatted_examples_test = {"cross_operation_negatives":[], "in_operation_negatives":[]}
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
-        max_train_examples = 5000
-        max_dev_examples = 500
+        max_train_examples = 10000
+        max_dev_examples = 300
         max_test_examples = 500
 
         # create a training and dev set entry for each example
