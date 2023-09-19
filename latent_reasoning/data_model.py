@@ -18,8 +18,8 @@ class DataModel:
         self.tokenized_test_dataset_cross = self.test_dataset["cross_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.tokenized_test_dataset_in = self.test_dataset["in_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.train_dataset = self.tokenized_train_dataset
-        self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset
-        self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset
+        self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset_cross
+        self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset_in
         self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
         self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
 
@@ -36,12 +36,12 @@ class DataModel:
 
         #convert dataset into json for dataset loader
         formatted_examples_train = []
-        formatted_examples_dev = []
+        formatted_examples_dev = {"cross_operation_negatives":[], "in_operation_negatives":[]}
         formatted_examples_test = {"cross_operation_negatives":[], "in_operation_negatives":[]}
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
         max_train_examples = 10000
-        max_dev_examples = 300
+        max_dev_examples = 500
         max_test_examples = 500
 
         # create a training and dev set entry for each example
@@ -118,7 +118,7 @@ class DataModel:
         dataset_train = Dataset.from_list(formatted_examples_train)
         dataset_dev = {}
         dataset_dev["cross_operation_negatives"] = Dataset.from_list(formatted_examples_dev["cross_operation_negatives"])
-        dataset_dev["in_operation_negatives"] = Dataset.from_list(formatted_examples_dev["in_operation_negatives"])        dataset_test = {}
+        dataset_dev["in_operation_negatives"] = Dataset.from_list(formatted_examples_dev["in_operation_negatives"])
         dataset_test = {}
         dataset_test["cross_operation_negatives"] = Dataset.from_list(formatted_examples_test["cross_operation_negatives"])
         dataset_test["in_operation_negatives"] = Dataset.from_list(formatted_examples_test["in_operation_negatives"])

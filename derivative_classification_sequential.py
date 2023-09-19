@@ -109,6 +109,7 @@ class Experiment:
         #BUILD DATALOADER FOR EVALUATION
         eval_loaders = {}
         eval_metrics = {}
+        eval_metrics["dev_set"] = {}
         map_dev = []
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
@@ -118,7 +119,7 @@ class Experiment:
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
-            if not(eval_type == "dev" and loader == "dev_set") and not(eval_type == "test" and loader != "dev_set"):
+            if not(eval_type == "dev" and "dev" in loader) and not(eval_type == "test" and not "dev" in loader):
                 continue
             eval_metrics[loader] = {}    
             # TODO optimize for variable batch size
@@ -199,14 +200,19 @@ class Experiment:
             #print results
             print("=============="+loader+"_"+str(training_step)+"==============")
             print("current scores:", eval_metrics[loader])
-        #SAVE BEST MODEL
+
+        if eval_type != "dev":
+            return
+
+        #CHECK AND SAVE BEST MODEL
         eval_metrics["dev_set"]["avg_map"] = np.mean(map_dev)
-        if eval_type == "dev" and eval_metrics["dev_set"]["avg_map"] >= self.eval_best_scores["dev_set"]["avg_map"]:
+        if eval_metrics["dev_set"]["avg_map"] >= self.eval_best_scores["dev_set"]["avg_map"]:
             #new best score
-            print("New best model...Save!!!")
+            print("New best model!!!")
             self.eval_best_scores = eval_metrics
             #SAVE THE MODEL
             if save_best_model:
+                print("Save the model...")
                 PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
                 if not os.path.exists(PATH):
                     os.makedirs(PATH)
@@ -229,9 +235,9 @@ if __name__ == '__main__':
                     help="Batch size.")
     parser.add_argument("--max_length", type=int, default=128, nargs="?",
                     help="Input Max Length.")
-    parser.add_argument("--epochs", type=int, default=16, nargs="?",
+    parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-4, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
