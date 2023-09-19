@@ -13,13 +13,15 @@ class DataModel:
         self.train_dataset, self.dev_dataset, self.test_dataset = self.process_dataset(neg = neg, srepr = srepr) #dataset_path = ["data/differentiation.json", "data/integration.json"])
         self.eval_dict = {}
         self.tokenized_train_dataset = self.train_dataset.map(self.tokenize_function_train, batched=False)
-        self.tokenized_dev_dataset = self.dev_dataset.map(self.tokenize_function_eval, batched=False)
+        self.tokenized_dev_dataset_cross = self.dev_dataset["cross_operation_negatives"].map(self.tokenize_function_eval, batched=False)
+        self.tokenized_dev_dataset_in = self.dev_dataset["in_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.tokenized_test_dataset_cross = self.test_dataset["cross_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.tokenized_test_dataset_in = self.test_dataset["in_operation_negatives"].map(self.tokenize_function_eval, batched=False)
         self.train_dataset = self.tokenized_train_dataset
-        self.eval_dict["cross_operation_negatives"] = self.tokenized_test_dataset_cross
-        self.eval_dict["in_operation_negatives"] = self.tokenized_test_dataset_in
-        self.eval_dict["dev_set"] = self.tokenized_dev_dataset
+        self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset
+        self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset
+        self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
+        self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
 
     def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
@@ -56,34 +58,30 @@ class DataModel:
             for op in operations:
                 #POSITIVE EXAMPLES
                 positive_examples = []
-                negative_examples = []
-
                 for res in example[op]:
                     #LATEX
-                    positive_examples.append(res["res"])
-                
+                    positive_examples.append(res["res"])       
                 #CROSS-OPERATION NEGATIVE EXAMPLES
                 neg_operations = operations
-                #negative_examples = []
+                negative_examples = []
                 for op_neg in neg_operations:
                     if op_neg == op:
                         continue
                     for res in example[op_neg]:
                         #LATEX
                         negative_examples.append(res["res"])
-                
+                formatted_examples_dev["cross_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
                 #IN-OPERATION NEGATIVE EXAMPLES
                 num_negs = 5
                 #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
                 neg_index = max_train_examples + max_dev_examples + 1
                 neg_premises = d_json[neg_index:neg_index+num_negs]
-                #negative_examples = []
+                negative_examples = []
                 for neg in neg_premises:
                     for res in neg[op]:
                         #LATEX
                         negative_examples.append(res["res"])
-
-                formatted_examples_dev.append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
+                formatted_examples_dev["in_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
 
         # create an evaluation entry for each example
         for example in tqdm(d_json[(max_train_examples + max_dev_examples): (max_train_examples + max_dev_examples + max_test_examples)], desc= dataset_path):
@@ -103,8 +101,7 @@ class DataModel:
                     for res in example[op_neg]:
                         #LATEX
                         negative_examples.append(res["res"])
-                formatted_examples_test["cross_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
-                
+                formatted_examples_test["cross_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})  
                 #IN-OPERATION NEGATIVE EXAMPLES
                 num_negs = 5
                 #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
@@ -117,13 +114,13 @@ class DataModel:
                         negative_examples.append(res["res"])
                 formatted_examples_test["in_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
         
-        #split randomly between train, dev, and test set
+        #build datasets 
         dataset_train = Dataset.from_list(formatted_examples_train)
-        dataset_dev = Dataset.from_list(formatted_examples_dev)
+        dataset_dev = {}
+        dataset_dev["cross_operation_negatives"] = Dataset.from_list(formatted_examples_dev["cross_operation_negatives"])
+        dataset_dev["in_operation_negatives"] = Dataset.from_list(formatted_examples_dev["in_operation_negatives"])        dataset_test = {}
         dataset_test = {}
         dataset_test["cross_operation_negatives"] = Dataset.from_list(formatted_examples_test["cross_operation_negatives"])
         dataset_test["in_operation_negatives"] = Dataset.from_list(formatted_examples_test["in_operation_negatives"])
-        #if test_size == 1.0:
-        #    return dataset
-        #dataset_split = dataset.train_test_split(test_size = test_size)
+        
         return dataset_train, dataset_dev, dataset_test

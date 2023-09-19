@@ -109,17 +109,12 @@ class Experiment:
         #BUILD DATALOADER FOR EVALUATION
         eval_loaders = {}
         eval_metrics = {}
-        test_batch_size = batch_size
+        map_dev = []
         for dataset_name in self.eval_dict:
-            batch_size = test_batch_size
-            #if dataset_name == "dev_set":
-                #set train batch size
-            #    batch_size = self.batch_size
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
-            #if dataset_name == "dev_set" and not dataset_name in self.eval_best_scores:
-            #    self.eval_best_scores[dataset_name] = {"difference": 0.0}
             if not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"map": 0.0}
+            self.eval_best_scores["dev_set"] = {"avg_map": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
@@ -199,26 +194,30 @@ class Experiment:
             for op in map_ops:
                 map_ops[op] = np.mean(map_ops[op])
             eval_metrics[loader]["map_ops"] = map_ops
+            if "dev" in loader:
+                map_dev.append(eval_metrics[loader]["map"])
             #print results
             print("=============="+loader+"_"+str(training_step)+"==============")
             print("current scores:", eval_metrics[loader])
-            if eval_type == "dev" and eval_metrics[loader]["map"] >= self.eval_best_scores[loader]["map"]:
-                #new best score
-                print("New best model...Save!!!")
-                self.eval_best_scores = eval_metrics
-                #SAVE THE MODEL
-                if save_best_model:
-                    PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
-                    if not os.path.exists(PATH):
-                        os.makedirs(PATH)
-                    #save model parameters
-                    torch.save(self.model.state_dict(), PATH + "state_dict.pt")
-                    #save vocabulary
-                    pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
-                    #save operations dictionary
-                    pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
-                print("===========Best Model==========")
-                print(self.eval_best_scores)
+        #SAVE BEST MODEL
+        eval_metrics["dev_set"]["avg_map"] = np.mean(map_dev)
+        if eval_type == "dev" and eval_metrics["dev_set"]["avg_map"] >= self.eval_best_scores["dev_set"]["avg_map"]:
+            #new best score
+            print("New best model...Save!!!")
+            self.eval_best_scores = eval_metrics
+            #SAVE THE MODEL
+            if save_best_model:
+                PATH = "models/" + self.model_type + "_" + str(self.trans) + "_" + str(self.one_hot) + "_" +str(self.num_ops) + "_" + str(self.model.dim) + "/"
+                if not os.path.exists(PATH):
+                    os.makedirs(PATH)
+                #save model parameters
+                torch.save(self.model.state_dict(), PATH + "state_dict.pt")
+                #save vocabulary
+                pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
+                #save operations dictionary
+                pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
+            print("===========Best Model==========")
+            print(self.eval_best_scores)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
