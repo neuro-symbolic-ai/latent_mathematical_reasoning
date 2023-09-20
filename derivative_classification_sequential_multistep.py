@@ -8,13 +8,16 @@ import evaluate
 from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from latent_reasoning.data_model import DataModelMultiStep
-from latent_reasoning.TranslationalReasoningTransformer import TransLatentReasoning
+from latent_reasoning.sequential_utils import *
+from latent_reasoning.BaselinesSequential import LatentReasoningSeq
+from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
     
 class Experiment:
 
     def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, one_hot = False, load_model_path = None):
-        self.model_name = model
+        self.model_type = model
         self.epochs = epochs
+        self.trans = trans
         self.learning_rate = learning_rate
         self.max_length = max_length
         self.batch_size = batch_size
@@ -22,7 +25,7 @@ class Experiment:
         self.operations_voc = pickle.load(open(load_model_path + "/operations", "rb"))
         self.vocabulary =  pickle.load(open(load_model_path + "/vocabulary", "rb"))
         #LOAD DATA
-        self.corpus = Corpus(self.max_length)
+        self.corpus = Corpus(self.max_length, build_voc = False)
         self.corpus.dictionary.word2idx = self.vocabulary
         self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModelMultiStep(neg, self.operations_voc, self.tokenize_function)
@@ -35,10 +38,10 @@ class Experiment:
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
@@ -60,7 +63,7 @@ class Experiment:
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 
-    def evaluation(self, batch_size = 4):
+    def evaluation(self, batch_size = 1):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
@@ -92,21 +95,24 @@ class Experiment:
                         logits_metric[inference_step] = []
                     if not inference_step in label_metric:
                         label_metric[inference_step] = []
+                    item_index = 0
                     for item in eval_batch["steps"][inference_step]:
                         equation1 = item["equation1"]
                         equation2 = item["equation2"]
                         target = item["target"]
                         labels = item["label"]
                         operation = item['operation']
-                        outputs = self.model(equation1, equation2, target, operation, labels)
-                        #if inference_step == "0":
-                        #    outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
-                        #else:
-                        #    outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
-                        #inference_state[item_index] = outputs[1]
-                        for score in outputs[1]:
+                        #outputs = self.model(equation1, equation2, target, operation, labels)
+                        if inference_step == "0":
+                            outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
+                        else:
+                            outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
+                        inference_state[item_index] = outputs[1]
+                        #print(outputs[0])
+                        #print(labels)
+                        for score in outputs[0]:
                             if score == torch.max(outputs[0]):
-                                logits_metric[inference_step].append(1)
+                                logits_metric[inference_step].append(0)
                             else:
                                 logits_metric[inference_step].append(0)
                         label_index = 0
@@ -118,6 +124,7 @@ class Experiment:
                                 scores_neg[inference_step].append(outputs[1].detach().cpu().numpy()[label_index])
                                 label_metric[inference_step].append(0)
                             label_index += 1
+                        item_index += 1
                 if batch_index > max_batch:
                     break
                 batch_index += 1
@@ -141,7 +148,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
                     help="Which dataset to use")
-    parser.add_argument("--model", type=str, default="distilbert-base-uncased", nargs="?",
+    parser.add_argument("--model", type=str, default="cnn", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=8, nargs="?",
                     help="Batch size.")
@@ -171,6 +178,6 @@ if __name__ == '__main__':
             model = args.model,
             trans = True,
             one_hot = False,
-            load_model_path = "models/rnn_best_dev_set_6.pt",
+            load_model_path = "models/cnn_True_False_6_300",
             )
     experiment.evaluation()

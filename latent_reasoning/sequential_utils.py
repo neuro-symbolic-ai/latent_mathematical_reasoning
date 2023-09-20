@@ -20,17 +20,18 @@ class Dictionary(object):
 
 
 class Corpus(object):
-    def __init__(self, max_len = 128, min_vars_n = 0):
+    def __init__(self, max_len = 128, min_vars_n = 0, build_voc = True):
         self.dictionary = Dictionary()
-        # padding
-        self.dictionary.add_word("[PAD]")
-        # unknown token
-        self.dictionary.add_word("[UNK]")
-        # max sequence length
         self.max_len = max_len
-        # preset of variable tokens
-        for var_count in range(min_vars_n):
-            self.dictionary.add_word("var_" + str(var_count))
+        self.build_voc = build_voc
+        if build_voc:
+            # padding
+            self.dictionary.add_word("[PAD]")
+            # unknown token
+            self.dictionary.add_word("[UNK]")
+            # preset of variable tokens
+            for var_count in range(min_vars_n):
+                self.dictionary.add_word("var_" + str(var_count))
 
     def build_vocabulary(self, path):
         """CHANGE IF WE WANT TO PRE-BUILD THE VOCABULARY"""
@@ -42,7 +43,8 @@ class Corpus(object):
                 for word in words:
                     self.dictionary.add_word(word)
 
-    def tokenizer(self, sentences:list, build_vocabulary = True):
+    def tokenizer(self, sentences:list):
+        build_vocabulary = self.build_voc
         sep_tokens = ["{", "}", "(", ")", "[", "]", "^", "d", "_", "|"]
         tokenized_sentences = []
         for sentence in sentences:
@@ -59,7 +61,7 @@ class Corpus(object):
                 if word in self.dictionary.word2idx:
                     ids.append(self.dictionary.word2idx[word])
                 else:
-                    ids.append(self.dictionary.word2idx["[UNK"])
+                    ids.append(self.dictionary.word2idx["[UNK]"])
                 mask.append(0)
                 word_count += 1
                 if word_count == self.max_len:
