@@ -84,10 +84,11 @@ class Experiment:
             logits_metric = {}
             label_metric = {}
             batch_index = 0
-            max_batch = 200
+            max_batch = 100
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
                 for inference_step in eval_batch["steps"]:
+                    #print(inference_step, len(inference_state.keys()))
                     if not inference_step in scores_pos:
                         scores_pos[inference_step] = []
                     if not inference_step in scores_neg:
@@ -105,12 +106,11 @@ class Experiment:
                         labels = item["label"]
                         operation = item['operation']
                         #print(item)
-                        #outputs = self.model(equation1, equation2, target, operation, labels)
-                        #if inference_step == "0":
-                        outputs = self.model.inference_step(None, equation1, equation2, target, operation, labels)
-                        #else:
-                        #    outputs = self.model.inference_step(inference_state[item_index], None, equation2, target, operation, labels)
-                        #inference_state[item_index] = outputs[1]
+                        if inference_step == "0":
+                            outputs = self.model.inference_step(None, equation1, None, target, operation, labels)
+                        else:
+                            outputs = self.model.inference_step(inference_state[item_index], None, None, target, operation, labels)
+                        inference_state[item_index] = outputs[1]
                         #print(outputs[0])
                         for score in outputs[0]:
                             if len(temp_score) == 0:
@@ -128,10 +128,10 @@ class Experiment:
                         label_index = 0
                         for label in labels:
                             if label == 1.0:
-                                #scores_pos[inference_step].append(outputs[1].detach().cpu().numpy()[label_index])
+                                scores_pos[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
                                 label_metric[inference_step].append(1)
                             else:
-                                #scores_neg[inference_step].append(outputs[1].detach().cpu().numpy()[label_index])
+                                scores_neg[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
                                 label_metric[inference_step].append(0)
                             label_index += 1
                         item_index += 1
@@ -139,14 +139,14 @@ class Experiment:
                     break
                 batch_index += 1
             eval_metrics = {}
-            #positive_avg = {}
-            #negative_avg = {}
-            #difference_avg = {}
+            positive_avg = {}
+            negative_avg = {}
+            difference_avg = {}
             for inference_step in logits_metric:
                 eval_metrics[inference_step] = self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
-                #positive_avg[inference_step] = np.mean(scores_pos[inference_step])
-                #negative_avg[inference_step] = np.mean(scores_neg[inference_step])
-                #difference_avg[inference_step] = positive_avg[inference_step] - negative_avg[inference_step]
+                positive_avg[inference_step] = np.mean(scores_pos[inference_step])
+                negative_avg[inference_step] = np.mean(scores_neg[inference_step])
+                difference_avg[inference_step] = positive_avg[inference_step] - negative_avg[inference_step]
             #print results
             print("=============="+str(step)+"==============")
             #print("positive avg sim:", positive_avg)
@@ -158,7 +158,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
                     help="Which dataset to use")
-    parser.add_argument("--model", type=str, default="cnn", nargs="?",
+    parser.add_argument("--model", type=str, default="rnn", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=8, nargs="?",
                     help="Batch size.")
@@ -186,8 +186,8 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             one_hot = False,
-            load_model_path = "models/cnn_True_False_6_300",
+            load_model_path = "models/rnn_False_False_6_512",
             )
     experiment.evaluation()

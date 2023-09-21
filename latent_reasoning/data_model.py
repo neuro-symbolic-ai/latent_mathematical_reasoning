@@ -157,8 +157,8 @@ class DataModelMultiStep:
             formatted_example["idx"] = example_id
             formatted_example["steps"] = {}
             for step in example["steps"]:
-                #if len(step["negatives"]) == 0:
-                #    continue
+                if len(step["negatives"]) == 0:
+                    continue
                 op_name = step["operation_name"]
                 if not str(step_count) in formatted_example["steps"]:
                     formatted_example["steps"][str(step_count)] = []
@@ -173,7 +173,8 @@ class DataModelMultiStep:
                 #LATEX
                 if not srepr:
                     neg_premise = p_d_json[start_p_index]
-                    neg_example = neg_premise[op_name][0]
+                    start_p_index += 1
+                    neg_example = neg_premise["premise"] #[op_name][0]["res"]
                     formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
                     #for negative in step["negatives"]:
                     #    if count_neg == neg:
