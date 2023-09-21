@@ -98,7 +98,7 @@ class Experiment:
                     if not inference_step in label_metric:
                         label_metric[inference_step] = []
                     item_index = 0
-                    temp_score = []
+                    temp_score = {}
                     for item in eval_batch["steps"][inference_step]:
                         equation1 = item["equation1"]
                         equation2 = item["equation2"]
@@ -113,28 +113,26 @@ class Experiment:
                         inference_state[item_index] = outputs[1]
                         #print(outputs[0])
                         for score in outputs[0]:
-                            if len(temp_score) == 0:
-                                temp_score.append(score)
-                            else:
-                                if score >= temp_score[0]:
-                                    logits_metric[inference_step] += [0, 1]
-                                else:
-                                    logits_metric[inference_step] += [1, 0]
-                                temp_score = []
-                            #if score == torch.max(outputs[0]):
-                            #    logits_metric[inference_step].append(1)
-                            #else:
-                            #    logits_metric[inference_step].append(0)
-                        label_index = 0
-                        for label in labels:
-                            if label == 1.0:
-                                scores_pos[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
-                                label_metric[inference_step].append(1)
-                            else:
-                                scores_neg[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
-                                label_metric[inference_step].append(0)
-                            label_index += 1
+                            temp_score[item_index] = score
+                        #label_index = 0
+                        #for label in labels:
+                        #    if label == 1.0:
+                        #        scores_pos[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
+                        #        label_metric[inference_step].append(1)
+                        #    else:
+                        #        scores_neg[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
+                        #        label_metric[inference_step].append(0)
+                        #    label_index += 1
                         item_index += 1
+                hit = False
+                for item in sorted(temp_score.items(), key=lambda item: item[1], reverse = True):
+                    if item == 0:
+                        hit = True
+                    break
+                if hit:
+                    label_metric[inference_step].append(1)
+                else:
+                    label_metric[inference_step].append(0)
                 if batch_index > max_batch:
                     break
                 batch_index += 1
@@ -143,7 +141,7 @@ class Experiment:
             negative_avg = {}
             difference_avg = {}
             for inference_step in logits_metric:
-                eval_metrics[inference_step] = self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
+                eval_metrics[inference_step] =  np.sum(label_metric[inference_step])/len(label_metric[inference_step]) #self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
                 positive_avg[inference_step] = np.mean(scores_pos[inference_step])
                 negative_avg[inference_step] = np.mean(scores_neg[inference_step])
                 difference_avg[inference_step] = positive_avg[inference_step] - negative_avg[inference_step]

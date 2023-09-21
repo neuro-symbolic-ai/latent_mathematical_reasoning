@@ -175,7 +175,10 @@ class DataModelMultiStep:
                     neg_premise = p_d_json[start_p_index]
                     start_p_index += 1
                     neg_example = neg_premise["premise"] #[op_name][0]["res"]
+                    neg_example1 = neg_premise[op_name][0]["res"]
                     formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example1, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": step["positive"] + " " + step["variable"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})                    
                     #for negative in step["negatives"]:
                     #    if count_neg == neg:
                     #        break
