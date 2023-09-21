@@ -131,9 +131,7 @@ class DataModelMultiStep:
     def __init__(self, neg = 1, operations_voc = None, tokenize_function = None, srepr = False):
         #PROCESS DATA
         self.tokenize_function = tokenize_function
-        #training data needs to be processed for operations and setup
-        #MAKE OPERATIONS VOCABULARY DYNAMIC 
-        #self.operations_voc = DataModel(do_train = False, do_test = False).operations_voc
+        self.premise_dataset_path = "data/premises_dataset.json"
         self.operations_voc = operations_voc
         self.opereations_voc_rev = {}
         for op_id in self.operations_voc:
@@ -146,6 +144,9 @@ class DataModelMultiStep:
         #convert dataset into json for dataset loader
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
+        p_d_file = open(self.premise_dataset_path, 'r')
+        p_d_json = json.load(p_d_file)
+        start_p_index = 12800 + 500 + 1
         # create an entry for each positive example
         tot_formatted_examples = []
         example_id = 0
@@ -156,8 +157,9 @@ class DataModelMultiStep:
             formatted_example["idx"] = example_id
             formatted_example["steps"] = {}
             for step in example["steps"]:
-                if len(step["negatives"]) == 0:
-                    continue
+                #if len(step["negatives"]) == 0:
+                #    continue
+                op_name = step["operation_name"]
                 if not str(step_count) in formatted_example["steps"]:
                     formatted_example["steps"][str(step_count)] = []
                 #LATEX
@@ -170,11 +172,14 @@ class DataModelMultiStep:
                 count_neg = 0
                 #LATEX
                 if not srepr:
-                    for negative in step["negatives"]:
-                        if count_neg == neg:
-                            break
-                        formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": negative, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
-                        count_neg += 1
+                    neg_premise = p_d_json[start_p_index]
+                    neg_example = neg_premise[op_name][0]
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
+                    #for negative in step["negatives"]:
+                    #    if count_neg == neg:
+                    #        break
+                    #    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": negative, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
+                    #    count_neg += 1
                 #SIMPY
                 else:
                     for negative in step["srepr_negatives"]:
