@@ -257,10 +257,13 @@ class GNNModel(nn.Module):
         nodes, edge_index, pos = self.all_to_one_graph(src)
         output = []
         x = self.node_embedding(nodes)
+        first_layer = True
         for layer in self.gnn:
+            if not first_layer:
+                # apply non linearity
+                x = F.relu(x)
             x = layer(x=x, edge_index=edge_index)
-            #apply non-linearity between layers
-            x = F.relu(x)
+            first_layer = False
         for i in range(len(pos) - 1):
             output.append(torch.mean(x[pos[i]:pos[i + 1]], dim=0))
         output = torch.stack(output, dim=0)
