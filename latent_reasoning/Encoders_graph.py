@@ -195,12 +195,13 @@ class TransformerModel(nn.Module):
         return output
 
 
+#============================================================== GNN ENCODERS ======================================================================
 class GNNModel(nn.Module):
     """Container module with an encoder, a transformer module, and mean pooling.
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, gnn_type='gnn_GAT_direct', ninp=512, nhead=8, nhid=512, nlayers=6, dropout=0.1):
+    def __init__(self, ntoken, device, gnn_type='gnn_GAT_direct', ninp=300, nhead=8, nhid=300, nlayers=6, dropout=0.1):
         super(GNNModel, self).__init__()
         from torch_geometric.nn import GATConv, GCNConv, GraphSAGE, TransformerConv
         self.device = device
@@ -258,6 +259,8 @@ class GNNModel(nn.Module):
         x = self.node_embedding(nodes)
         for layer in self.gnn:
             x = layer(x=x, edge_index=edge_index)
+            #apply non-linearity between layers
+            x = F.relu(x)
         for i in range(len(pos) - 1):
             output.append(torch.mean(x[pos[i]:pos[i + 1]], dim=0))
         output = torch.stack(output, dim=0)
