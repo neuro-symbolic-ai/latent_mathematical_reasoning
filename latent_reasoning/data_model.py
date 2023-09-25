@@ -20,8 +20,8 @@ class DataModel:
         self.train_dataset = self.tokenized_train_dataset
         self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset_cross
         self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset_in
-        #self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
-        #self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
+        self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
+        self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
 
     def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
@@ -44,7 +44,7 @@ class DataModel:
         max_dev_examples = 500
         max_test_examples = 1000
 
-        # create a training and dev set entry for each example
+        # create a training set entry for each example
         for example in tqdm(d_json[:max_train_examples], desc= dataset_path):
             premise = example["premise"]
             for op in operations:
@@ -55,6 +55,7 @@ class DataModel:
 
         for example in tqdm(d_json[max_train_examples: (max_train_examples + max_dev_examples)], desc= dataset_path):
             premise = example["premise"]
+            p_len = example["var_count"]
             for op in operations:
                 #POSITIVE EXAMPLES
                 positive_examples = []
@@ -70,7 +71,7 @@ class DataModel:
                     for res in example[op_neg]:
                         #LATEX
                         negative_examples.append(res["res"])
-                formatted_examples_dev["cross_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
+                formatted_examples_dev["cross_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
                 #IN-OPERATION NEGATIVE EXAMPLES
                 num_negs = 5
                 #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
@@ -81,11 +82,12 @@ class DataModel:
                     for res in neg[op]:
                         #LATEX
                         negative_examples.append(res["res"])
-                formatted_examples_dev["in_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
+                formatted_examples_dev["in_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
 
         # create an evaluation entry for each example
         for example in tqdm(d_json[(max_train_examples + max_dev_examples): (max_train_examples + max_dev_examples + max_test_examples)], desc= dataset_path):
             premise = example["premise"]
+            p_len = example["var_count"]
             for op in operations:
                 #POSITIVE EXAMPLES
                 positive_examples = []
@@ -101,7 +103,7 @@ class DataModel:
                     for res in example[op_neg]:
                         #LATEX
                         negative_examples.append(res["res"])
-                formatted_examples_test["cross_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})  
+                formatted_examples_test["cross_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})  
                 #IN-OPERATION NEGATIVE EXAMPLES
                 num_negs = 5
                 #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
@@ -112,7 +114,7 @@ class DataModel:
                     for res in neg[op]:
                         #LATEX
                         negative_examples.append(res["res"])
-                formatted_examples_test["in_operation_negatives"].append({"premise": premise, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
+                formatted_examples_test["in_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
         
         #build datasets 
         dataset_train = Dataset.from_list(formatted_examples_train)

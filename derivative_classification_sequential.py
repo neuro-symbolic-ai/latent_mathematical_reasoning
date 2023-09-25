@@ -27,13 +27,21 @@ class Experiment:
         self.trans = trans
         self.one_hot = one_hot
         #LOAD DATA
-        self.corpus = Corpus(self.max_length)
+        if load_model_path is not None:
+            #load pretrained vocabulary
+            self.operations_voc = pickle.load(open(load_model_path + "/operations", "rb"))
+            self.vocabulary =  pickle.load(open(load_model_path + "/vocabulary", "rb"))
+            self.corpus = Corpus(self.max_length, build_voc = False)
+            self.corpus.dictionary.word2idx = self.vocabulary
+        else:
+            self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function_train, self.tokenize_function_eval)
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
-        self.operations_voc = self.data_model.operations_voc
-        self.vocabulary = self.corpus.dictionary.word2idx
+        if load_model_path is None:
+            self.operations_voc = self.data_model.operations_voc
+            self.vocabulary = self.corpus.dictionary.word2idx
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
@@ -132,6 +140,7 @@ class Experiment:
             hit_5 = []
             map_res = []
             map_ops = {}
+            map_len = {}
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
                 scores_examples = {}
                 scores_pos = []
@@ -143,7 +152,8 @@ class Experiment:
                 premise = eval_batch["premise"]
                 positives = eval_batch["positive"]
                 negatives = eval_batch["negative"]
-                operation = eval_batch['operation']
+                operation = eval_batch["operation"]
+                p_len = eval_batch["len"]
                 for positive in positives:
                     score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
                     score = score.detach().cpu().numpy()[0]
@@ -166,6 +176,9 @@ class Experiment:
                 if not op_name in map_ops:
                     map_ops[op_name] = []
                 map_ops[op_name].append(ap_score)
+                if not p_len in map_len:
+                    map_len[p_len] = []
+                map_len[p_len].append(ap_score)
                 map_res.append(ap_score)
                 avg_diff.append(np.mean(scores_pos) - np.mean(scores_neg))
                 sorted_scores = dict(sorted(scores_examples.items(), key=lambda item: item[1], reverse = True))
@@ -196,6 +209,9 @@ class Experiment:
             for op in map_ops:
                 map_ops[op] = np.mean(map_ops[op])
             eval_metrics[loader]["map_ops"] = map_ops
+            for p_len in map_len:
+                map_len[p_len] = np.mean(map_len[p_len])
+            eval_metrics[loader]["map_len"] = map_ops
             if "dev" in loader:
                 map_dev.append(eval_metrics[loader]["map"])
             #print results
@@ -204,7 +220,6 @@ class Experiment:
 
         if eval_type != "dev":
             return
-
         #CHECK AND SAVE BEST MODEL
         eval_metrics["dev_set"]["avg_map"] = np.mean(map_dev)
         if eval_metrics["dev_set"]["avg_map"] > self.eval_best_scores["dev_set"]["avg_map"]:
@@ -260,9 +275,9 @@ if __name__ == '__main__':
             model = args.model,
             trans = False,
             one_hot = False,
-            #load_model_path = "models/rnn_best_dev_set_6.pt",
-            #do_train = False,
-            #do_test = True
+            load_model_path = "models/rnn_best_dev_set_6.pt",
+            do_train = False,
+            do_test = True
             )
-    experiment.train_and_eval()
-    #experiment.evaluation(save_best_model = False)
+    #experiment.train_and_eval()
+    experiment.evaluation(eval_type = "test", save_best_model = False)
