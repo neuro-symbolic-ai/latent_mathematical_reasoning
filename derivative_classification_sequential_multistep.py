@@ -124,15 +124,16 @@ class Experiment:
                         #        label_metric[inference_step].append(0)
                         #    label_index += 1
                         item_index += 1
-                hit = False
-                for item in sorted(temp_score.items(), key=lambda item: item[1], reverse = True):
-                    if item == 0:
-                        hit = True
-                    break
-                if hit:
-                    label_metric[inference_step].append(1)
-                else:
-                    label_metric[inference_step].append(0)
+                    hit = False
+                    sorted_scores = dict(sorted(temp_score.items(), key=lambda item: item[1], reverse = True))
+                    for item_id in sorted_scores:
+                        if item_id == 0:
+                            hit = True
+                        break
+                    if hit:
+                        label_metric[inference_step].append(1)
+                    else:
+                        label_metric[inference_step].append(0)
                 if batch_index > max_batch:
                     break
                 batch_index += 1
@@ -141,7 +142,7 @@ class Experiment:
             negative_avg = {}
             difference_avg = {}
             for inference_step in logits_metric:
-                eval_metrics[inference_step] =  np.sum(label_metric[inference_step])/len(label_metric[inference_step]) #self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
+                eval_metrics[inference_step] =  np.mean(label_metric[inference_step]) #self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
                 positive_avg[inference_step] = np.mean(scores_pos[inference_step])
                 negative_avg[inference_step] = np.mean(scores_neg[inference_step])
                 difference_avg[inference_step] = positive_avg[inference_step] - negative_avg[inference_step]
@@ -184,8 +185,8 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             one_hot = False,
-            load_model_path = "models/rnn_False_False_6_512",
+            load_model_path = "models/transformer_True_False_6_512",
             )
     experiment.evaluation()

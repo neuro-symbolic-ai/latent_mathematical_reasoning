@@ -133,9 +133,9 @@ class DataModelMultiStep:
         self.tokenize_function = tokenize_function
         self.premise_dataset_path = "data/premises_dataset.json"
         self.operations_voc = operations_voc
-        self.opereations_voc_rev = {}
+        self.operations_voc_rev = {}
         for op_id in self.operations_voc:
-            self.opereations_voc_rev[self.operations_voc[op_id]] = op_id
+            self.operations_voc_rev[self.operations_voc[op_id]] = op_id
         self.eval_dict = {}
         self.test_dataset_multi_step = self.process_dataset(srepr = srepr)
         self.eval_dict["multi_step"] = self.test_dataset_multi_step.map(self.tokenize_function, batched = False)
@@ -164,21 +164,26 @@ class DataModelMultiStep:
                     formatted_example["steps"][str(step_count)] = []
                 #LATEX
                 if not srepr:
-                    formatted_example["steps"][str(step_count)].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": 1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step['premise_expression'], "equation2": step['variable'], "target": step["positive"], "operation": self.operations_voc_rev[step["operation_name"]], "label": 1.0})
                 #SIMPY
                 else:
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["srepr_premise_expression"], "equation2": step["srepr_variable"], "target": step["srepr_positive"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": 1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["srepr_premise_expression"], "equation2": step["srepr_variable"], "target": step["srepr_positive"], "operation": self.operations_voc_rev[step["operation_name"]], "label": 1.0})
                 #NEGATIVE EXAMPLES
                 count_neg = 0
                 #LATEX
                 if not srepr:
                     neg_premise = p_d_json[start_p_index]
                     start_p_index += 1
-                    neg_example = neg_premise["premise"] #[op_name][0]["res"]
-                    neg_example1 = neg_premise[op_name][0]["res"]
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example1, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": step["positive"] + " " + step["variable"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})                    
+                    op_id = self.operations_voc_rev[op_name]
+                    if op_id + 1 == len(self.operations_voc.keys()):
+                        op_id = 0
+                    else:
+                        op_id += 1
+                    neg_example = neg_premise[op_name][0]["res"] #[op_name][0]["res"]
+                    neg_example1 = neg_premise[self.operations_voc[op_id]][0]["res"]
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example1, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    #formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": step["positive"] + " " + step["variable"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})                    
                     #for negative in step["negatives"]:
                     #    if count_neg == neg:
                     #        break
@@ -189,7 +194,7 @@ class DataModelMultiStep:
                     for negative in step["srepr_negatives"]:
                         if count_neg == neg:
                             break
-                        formatted_example["steps"][str(step_count)].append({"equation1": step["srepr_premise_expression"], "equation2": step["srepr_variable"], "target": negative, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
+                        formatted_example["steps"][str(step_count)].append({"equation1": step["srepr_premise_expression"], "equation2": step["srepr_variable"], "target": negative, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
                         count_neg += 1
                 step_count += 1
             tot_formatted_examples.append(formatted_example)

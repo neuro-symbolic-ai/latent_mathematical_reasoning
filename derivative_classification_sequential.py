@@ -109,13 +109,14 @@ class Experiment:
         #BUILD DATALOADER FOR EVALUATION
         eval_loaders = {}
         eval_metrics = {}
-        eval_metrics["dev_set"] = {}
+        eval_metrics["dev_set"] = {"avg_map": 0.0}
         map_dev = []
         for dataset_name in self.eval_dict:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"map": 0.0}
-            self.eval_best_scores["dev_set"] = {"avg_map": 0.0}
+            if not "dev_set" in self.eval_best_scores:
+                self.eval_best_scores["dev_set"] = {"avg_map": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
@@ -124,7 +125,7 @@ class Experiment:
             eval_metrics[loader] = {}    
             # TODO optimize for variable batch size
             eval_steps = 0
-            max_steps = 100
+            max_steps = 200
             avg_diff = []
             hit_1 = []
             hit_3 = []
@@ -206,7 +207,7 @@ class Experiment:
 
         #CHECK AND SAVE BEST MODEL
         eval_metrics["dev_set"]["avg_map"] = np.mean(map_dev)
-        if eval_metrics["dev_set"]["avg_map"] >= self.eval_best_scores["dev_set"]["avg_map"]:
+        if eval_metrics["dev_set"]["avg_map"] > self.eval_best_scores["dev_set"]["avg_map"]:
             #new best score
             print("New best model!!!")
             self.eval_best_scores = eval_metrics
@@ -222,8 +223,8 @@ class Experiment:
                 pickle.dump(self.vocabulary, open(PATH + "vocabulary", "wb"))
                 #save operations dictionary
                 pickle.dump(self.operations_voc, open(PATH + "operations", "wb"))
-            print("===========Best Model==========")
-            print(self.eval_best_scores)
+        print("===========Best Model==========")
+        print(self.eval_best_scores)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -237,7 +238,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=3e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
@@ -257,7 +258,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,

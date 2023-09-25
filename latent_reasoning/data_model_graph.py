@@ -20,8 +20,8 @@ class DataModel:
         self.train_dataset = self.tokenized_train_dataset
         self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset_cross
         self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset_in
-        self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
-        self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
+        #self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
+        #self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
 
     def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
@@ -41,9 +41,9 @@ class DataModel:
         formatted_examples_test = {"cross_operation_negatives":[], "in_operation_negatives":[]}
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
-        max_train_examples = 10000
+        max_train_examples = 12800
         max_dev_examples = 500
-        max_test_examples = 500
+        max_test_examples = 1000
 
         # create a training and dev set entry for each example
         for example in tqdm(d_json[:max_train_examples], desc= dataset_path):

@@ -28,12 +28,12 @@ class Experiment:
         self.trans = trans
         self.one_hot = one_hot
         #LOAD DATA
-        if self.model_type[:3] == 'gnn':
-            self.corpus = GraphCorpus(self.max_length)
-            self.vocabulary = self.corpus.node_dict
-        else:
-            self.corpus = GraphCorpus(self.max_length)
-            self.vocabulary = self.corpus.node_dict
+        #if self.model_type[:3] == 'gnn':
+        #    self.corpus = GraphCorpus(self.max_length)
+        #    self.vocabulary = self.corpus.node_dict
+        #else:
+        self.corpus = GraphCorpus(self.max_length)
+        self.vocabulary = self.corpus.node_dict
         self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function_train, self.tokenize_function_eval,
                                     srepr=(self.model_type[:3] == 'gnn'))
@@ -121,7 +121,8 @@ class Experiment:
             eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size=batch_size, shuffle=False)
             if not dataset_name in self.eval_best_scores:
                 self.eval_best_scores[dataset_name] = {"map": 0.0}
-            self.eval_best_scores["dev_set"] = {"avg_map": 0.0}
+            if not "dev_set" in self.eval_best_scores:
+                self.eval_best_scores["dev_set"] = {"avg_map": 0.0}
         #START EVALUATION
         print("EVALUATION")
         for loader in eval_loaders:
@@ -263,7 +264,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = True,
+            trans = False,
             one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,
