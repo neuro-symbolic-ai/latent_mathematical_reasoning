@@ -1,0 +1,144 @@
+import os
+import json
+import pickle
+import argparse
+import torch
+import numpy as np
+from tqdm import tqdm
+import evaluate
+from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
+from torch.utils.data import DataLoader
+from torch.optim import AdamW
+from latent_reasoning.data_model import DataModel
+from latent_reasoning.sequential_utils import *
+from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
+from latent_reasoning.BaselinesSequential import LatentReasoningSeq
+from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
+
+class Experiment:
+
+    def __init__(self, model, batch_size, max_length, neg, trans = True, one_hot = False, load_model_path = None, do_train = True, do_test = False):
+        self.model_type = model
+        print("Model:", self.model_type)
+        self.max_length = max_length
+        self.batch_size = batch_size
+        self.trans = trans
+        self.one_hot = one_hot
+        #LOAD DATA
+        if load_model_path is not None:
+            #load pretrained vocabulary
+            self.operations_voc = pickle.load(open(load_model_path + "/operations", "rb"))
+            self.vocabulary =  pickle.load(open(load_model_path + "/vocabulary", "rb"))
+            self.corpus = Corpus(self.max_length, build_voc = False)
+            self.corpus.dictionary.word2idx = self.vocabulary
+        else:
+            self.corpus = Corpus(self.max_length)
+        self.tokenizer = self.corpus.tokenizer
+        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function_train, self.tokenize_function_eval)
+        self.train_dataset = self.data_model.train_dataset
+        self.eval_dict = self.data_model.eval_dict
+        if load_model_path is None:
+            self.operations_voc = self.data_model.operations_voc
+            self.vocabulary = self.corpus.dictionary.word2idx
+        #LOAD MODEL
+        self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
+        self.num_ops = len(self.operations_voc.keys())
+        #create model
+        if self.trans:
+            #translational model
+            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
+        else:
+            #baseline
+            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+        if load_model_path is not None:
+            #load pretrained model
+            self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
+
+    def tokenize_function_train(self, examples):
+        examples["equation1"], examples["equation2"], examples["target"] = self.tokenizer([examples["equation1"], examples["equation2"], examples["target"]])
+        return examples
+    
+    def tokenize_function_eval(self, examples):
+        examples["premise"] = self.tokenizer([examples["premise"]])[0]
+        examples["positive"] = self.tokenizer(examples["positive"])
+        examples["negative"] = self.tokenizer(examples["negative"]) 
+        return examples
+
+    def generate_embeddings(self, batch_size = 1, data_type = "dev"):
+        if self.eval_dict == None:
+            print("No evaluation data found!")
+            return
+        #BUILD DATALOADER FOR EVALUATION
+        print("Generating embeddings...")
+        embeddings_data = {}
+        embeddings_data_trans = {}
+        for loader in eval_loaders:
+            if not(eval_type == "dev" and "dev" in loader) and not(eval_type == "test" and not "dev" in loader):
+                continue
+            # TODO optimize for variable batch size
+            eval_steps = 0
+            max_steps = 1
+            embeddings_data[loader] = {}
+            embeddings_data_trans[loader] = {}
+            for eval_batch in tqdm(eval_loaders[loader], desc = loader):
+                embeddings_data[loader][eval_steps] = {}    
+                embeddings_data_trans[loader][eval_steps] = {}     
+                premise = eval_batch["premise"]
+                positives = eval_batch["positive"]
+                negatives = eval_batch["negative"]
+                operation = eval_batch["operation"]
+                embeddings_data[loader][eval_steps]["premise"] = self.model.encode(positive, None, is_premise = True)
+                embeddings_data_trans[loader][eval_steps]["premise"]  = self.model.encode(positive, operation, is_premise = True)
+                embeddings_data[loader][eval_steps]["positives"] = []
+                embeddings_data_trans[loader][eval_steps]["positives"] = []
+                embeddings_data[loader][eval_steps]["negatives"] = []
+                embeddings_data_trans[loader][eval_steps]["negatives"] = []
+                for positive in positives:
+                    embeddings_data[loader][eval_steps]["positives"].append(self.model.encode(positive, None, is_premise = False))
+                    embeddings_data_trans[loader][eval_steps]["positives"].append(self.model.encode(positive, operation, is_premise = False))
+                for negative in negatives:
+                    embeddings_data[loader][eval_steps]["negatives"].append(self.model.encode(positive, None, is_premise = False))
+                    embeddings_data_trans[loader][eval_steps]["negatives"].append(self.model.encode(positive, operation, is_premise = False))
+                if eval_steps > max_steps:
+                    break
+        # TODO SAVE EMBEDDINGS TO FILE
+        print(embeddings_data)
+        print("=========================================================")
+        print(embeddings_data_trans)
+
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
+                    help="Which dataset to use")
+    parser.add_argument("--model", type=str, default="transformer", nargs="?",
+                    help="Which model to use")
+    parser.add_argument("--batch_size", type=int, default=64, nargs="?",
+                    help="Batch size.")
+    parser.add_argument("--max_length", type=int, default=128, nargs="?",
+                    help="Input Max Length.")
+    parser.add_argument("--epochs", type=int, default=32, nargs="?",
+                    help="Num epochs.")
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
+                    help="Learning rate.")
+    parser.add_argument("--neg", type=int, default=1, nargs="?",
+                    help="Max number of negative examples")
+
+    args = parser.parse_args()
+    dataset = args.dataset
+    torch.backends.cudnn.deterministic = True 
+    seed = 42
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available:
+        torch.cuda.manual_seed_all(seed)
+    experiment = Experiment(
+            batch_size = args.batch_size, 
+            neg = args.neg,
+            max_length = args.max_length,
+            model = args.model,
+            trans = True,
+            one_hot = False,
+            load_model_path = "models/cnn_True_False_6_300"
+            )
+    experiment.model.eval()
+    experiment.generate_embeddings(data_type = "test")

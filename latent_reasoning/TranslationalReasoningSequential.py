@@ -107,3 +107,30 @@ class TransLatentReasoningSeq(nn.Module):
         scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)
 
         return scores, embeddings_output - ov
+
+
+    def inference_step(self, expression, operation, is_premise):
+        # GET OPERATION EMBEDDINGS
+        if operation != None:
+            operation = operation.to(self.device)
+        if is_premise:
+            Wo = self.Wo[operation]
+        else:
+            ov = self.ov(operation)
+
+        # ENCODE EXPRESSION
+        expression = {k: v.to(self.device) for k, v in expression.items()}
+        embeddings_expression = self.encoder(expression)
+
+        if operation == None:
+            return embeddings_expression
+
+        if is_premise:
+            embeddings_expression = self.linear(embeddings_expression)
+            embeddings_expression = embeddings_expression * Wo
+            return embeddings_expression
+
+        embeddings_expression = embeddings_expression + ov
+
+        return embeddings_expression
+
