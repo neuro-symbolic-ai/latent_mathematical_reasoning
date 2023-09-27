@@ -68,12 +68,17 @@ class Experiment:
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
+        
+        eval_loaders = {}
+        for dataset_name in self.eval_dict:
+            eval_loaders[dataset_name] = DataLoader(self.eval_dict[dataset_name].with_format("torch"), batch_size = batch_size, shuffle = False)
+
         #BUILD DATALOADER FOR EVALUATION
         print("Generating embeddings...")
         embeddings_data = {}
         embeddings_data_trans = {}
         for loader in eval_loaders:
-            if not(eval_type == "dev" and "dev" in loader) and not(eval_type == "test" and not "dev" in loader):
+            if not(data_type == "dev" and "dev" in loader) and not(data_type == "test" and not "dev" in loader):
                 continue
             # TODO optimize for variable batch size
             eval_steps = 0
@@ -87,24 +92,23 @@ class Experiment:
                 positives = eval_batch["positive"]
                 negatives = eval_batch["negative"]
                 operation = eval_batch["operation"]
-                embeddings_data[loader][eval_steps]["premise"] = self.model.encode(positive, None, is_premise = True)
-                embeddings_data_trans[loader][eval_steps]["premise"]  = self.model.encode(positive, operation, is_premise = True)
+                embeddings_data[loader][eval_steps]["premise"] = self.model.encode(premise, None, is_premise = True).detach().cpu().numpy()[0].tolist()
+                embeddings_data_trans[loader][eval_steps]["premise"]  = self.model.encode(premise, operation, is_premise = True).detach().cpu().numpy()[0].tolist()
                 embeddings_data[loader][eval_steps]["positives"] = []
                 embeddings_data_trans[loader][eval_steps]["positives"] = []
                 embeddings_data[loader][eval_steps]["negatives"] = []
                 embeddings_data_trans[loader][eval_steps]["negatives"] = []
                 for positive in positives:
-                    embeddings_data[loader][eval_steps]["positives"].append(self.model.encode(positive, None, is_premise = False))
-                    embeddings_data_trans[loader][eval_steps]["positives"].append(self.model.encode(positive, operation, is_premise = False))
+                    embeddings_data[loader][eval_steps]["positives"].append(self.model.encode(positive, None, is_premise = False).detach().cpu().numpy()[0].tolist())
+                    embeddings_data_trans[loader][eval_steps]["positives"].append(self.model.encode(positive, operation, is_premise = False).detach().cpu().numpy()[0].tolist())
                 for negative in negatives:
-                    embeddings_data[loader][eval_steps]["negatives"].append(self.model.encode(positive, None, is_premise = False))
-                    embeddings_data_trans[loader][eval_steps]["negatives"].append(self.model.encode(positive, operation, is_premise = False))
-                if eval_steps > max_steps:
-                    break
+                    embeddings_data[loader][eval_steps]["negatives"].append(self.model.encode(negative, None, is_premise = False).detach().cpu().numpy()[0].tolist())
+                    embeddings_data_trans[loader][eval_steps]["negatives"].append(self.model.encode(negative, operation, is_premise = False).detach().cpu().numpy()[0].tolist())
+                #if eval_steps > max_steps:
+                #    break
         # TODO SAVE EMBEDDINGS TO FILE
-        print(embeddings_data)
-        print("=========================================================")
-        print(embeddings_data_trans)
+        for dataset in embeddings_data:
+            json.dump(embeddings_data[dataset], open(dataset + "_embeddings.json", "w"), indent = 5)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
