@@ -50,13 +50,13 @@ class Experiment:
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
-            self.model.load_state_dict(torch.load(load_model_path))
+            self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
 
     def tokenize_function_train(self, examples):
         examples["equation1"], examples["equation2"], examples["target"] = self.tokenizer([examples["equation1"], examples["equation2"], examples["target"]])
@@ -153,7 +153,7 @@ class Experiment:
                 positives = eval_batch["positive"]
                 negatives = eval_batch["negative"]
                 operation = eval_batch["operation"]
-                p_len = eval_batch["len"]
+                p_len = eval_batch["len"].detach().cpu().numpy()[0]
                 for positive in positives:
                     score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
                     score = score.detach().cpu().numpy()[0]
@@ -211,7 +211,7 @@ class Experiment:
             eval_metrics[loader]["map_ops"] = map_ops
             for p_len in map_len:
                 map_len[p_len] = np.mean(map_len[p_len])
-            eval_metrics[loader]["map_len"] = map_ops
+            eval_metrics[loader]["map_len"] = map_len
             if "dev" in loader:
                 map_dev.append(eval_metrics[loader]["map"])
             #print results
@@ -253,7 +253,7 @@ if __name__ == '__main__':
                     help="Input Max Length.")
     parser.add_argument("--epochs", type=int, default=32, nargs="?",
                     help="Num epochs.")
-    parser.add_argument("--lr", type=float, default=3e-5, nargs="?",
+    parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
     parser.add_argument("--neg", type=int, default=1, nargs="?",
                     help="Max number of negative examples")
@@ -273,11 +273,12 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             one_hot = False,
-            load_model_path = "models/rnn_best_dev_set_6.pt",
-            do_train = False,
-            do_test = True
+            load_model_path = "models/cnn_True_False_6_300",
+            #do_train = False,
+            #do_test = True
             )
     #experiment.train_and_eval()
-    experiment.evaluation(eval_type = "test", save_best_model = False)
+    experiment.model.eval()
+    experiment.evaluation(0, eval_type = "test", save_best_model = False)

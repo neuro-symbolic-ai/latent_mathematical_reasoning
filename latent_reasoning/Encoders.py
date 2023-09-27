@@ -160,6 +160,7 @@ class TransformerModel(nn.Module):
     """
 
     def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 2048, nlayers = 6, dropout=0.1):
+
         super(TransformerModel, self).__init__()
         try:
             from torch.nn import TransformerEncoder, TransformerEncoderLayer

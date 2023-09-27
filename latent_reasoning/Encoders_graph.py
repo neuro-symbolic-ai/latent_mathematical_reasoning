@@ -201,7 +201,7 @@ class GNNModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, gnn_type='gnn_GAT_direct', ninp=300, nhead=8, nhid=300, nlayers=6, dropout=0.1):
+    def __init__(self, ntoken, device, gnn_type='gnn_GAT_direct', ninp=768, nhead=8, nhid=768, nlayers=6, dropout=0.1):
         super(GNNModel, self).__init__()
         from torch_geometric.nn import GATConv, GCNConv, GraphSAGE, TransformerConv
         self.device = device
