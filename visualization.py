@@ -32,7 +32,7 @@ if __name__ == '__main__':
 
     color = list(plt.cm.tab10.colors)
 
-    tsne = TSNE(random_state=seed, perplexity = len(x) -1)
+    tsne = TSNE(perplexity = 30, random_state=seed)
     y = tsne.fit_transform(x)
     plt.figure(figsize=(15, 9))
     plt.rcParams['font.family'] = 'Times New Roman'
