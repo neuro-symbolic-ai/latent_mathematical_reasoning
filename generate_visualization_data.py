@@ -108,7 +108,7 @@ class Experiment:
                 #    break
         # TODO SAVE EMBEDDINGS TO FILE
         for dataset in embeddings_data:
-            json.dump(embeddings_data[dataset], open(dataset + "_embeddings.json", "w"), indent = 5)
+            json.dump(embeddings_data[dataset], open(str(self.trans) + dataset + "_embeddings.json", "w"), indent = 5)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -140,9 +140,9 @@ if __name__ == '__main__':
             neg = args.neg,
             max_length = args.max_length,
             model = args.model,
-            trans = True,
+            trans = False,
             one_hot = False,
-            load_model_path = "models/cnn_True_False_6_300"
+            load_model_path = "models/cnn_False_False_6_300"
             )
     experiment.model.eval()
     experiment.generate_embeddings(data_type = "test")

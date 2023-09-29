@@ -8,7 +8,7 @@ import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='visualization')
-    parser.add_argument('-s', '--seed', type=int, default=0, help='random seed')
+    parser.add_argument('-s', '--seed', type=int, default=42, help='random seed')
     parser.add_argument('-f', '--file', default='test_set_cross_embeddings.json', help='json file path')
 
     args = parser.parse_args()
@@ -37,13 +37,13 @@ if __name__ == '__main__':
 
     x = np.array(r_pre+r_pos+r_neg)
 
-    tsne = TSNE(perplexity=30, random_state=seed)
+    tsne = TSNE(perplexity=50, metric = "cosine", early_exaggeration = 20.0, random_state=seed)
     y_tsne = tsne.fit_transform(x)
 
-    umap = UMAP(n_neighbors=15, random_state=seed)
+    umap = UMAP(n_neighbors=500, random_state=seed)
     y_umap = umap.fit_transform(x)
 
-    for d in ['0']:
+    for d in ['2']:
         temp = split[d]
         temp = [(temp[0][0], temp[0][1]),
                 (temp[1][0] + len(r_pre), temp[1][1] + len(r_pre)),
@@ -53,22 +53,22 @@ if __name__ == '__main__':
 
         color = list(plt.cm.tab10.colors)
 
-        plt.figure(figsize=(5, 5))
-        plt.rcParams['font.family'] = 'Times New Roman'
+        plt.figure(figsize=(4, 4))
+        #plt.rcParams['font.family'] = 'Times New Roman'
         for i in range(0, len(labels)):
             plt.scatter(y_tsne[temp[i][0]:temp[i][1], 0], y_tsne[temp[i][0]:temp[i][1], 1],
                         marker=markers[i], label=labels[i], color=color[i])
         plt.legend(fontsize=10, markerscale=1.0)
-        plt.title('T-SNE projection of one premise')
+        #plt.title('T-SNE projection of one premise')
         plt.savefig(f'{json_file[:-5]}_tsne_{d}.png')
         plt.close()
 
-        plt.figure(figsize=(5, 5))
-        plt.rcParams['font.family'] = 'Times New Roman'
-        for i in range(0, len(labels)):
-            plt.scatter(y_umap[temp[i][0]:temp[i][1], 0], y_umap[temp[i][0]:temp[i][1], 1],
-                        marker=markers[i], label=labels[i], color=color[i])
-        plt.legend(fontsize=10, markerscale=1.0)
-        plt.title('UMAP projection of one premise')
-        plt.savefig(f'{json_file[:-5]}_umap_{d}.png')
-        plt.close()
+        #plt.figure(figsize=(5, 5))
+        #plt.rcParams['font.family'] = 'Times New Roman'
+        #for i in range(0, len(labels)):
+        #    plt.scatter(y_umap[temp[i][0]:temp[i][1], 0], y_umap[temp[i][0]:temp[i][1], 1],
+        #                marker=markers[i], label=labels[i], color=color[i])
+        #plt.legend(fontsize=10, markerscale=1.0)
+        #plt.title('UMAP projection of one premise')
+        #plt.savefig(f'{json_file[:-5]}_umap_{d}.png')
+        #plt.close()
