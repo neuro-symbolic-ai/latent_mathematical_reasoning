@@ -109,7 +109,7 @@ class TransLatentReasoningSeq(nn.Module):
         return scores, embeddings_output - ov
 
 
-    def inference_step(self, expression, operation, is_premise):
+    def encode(self, expression, operation, is_premise):
         # GET OPERATION EMBEDDINGS
         if operation != None:
             operation = operation.to(self.device)
