@@ -174,23 +174,10 @@ class DataModelMultiStep:
                 count_neg = 0
                 #LATEX
                 if not srepr:
-                    neg_premise = p_d_json[start_p_index]
-                    start_p_index += 1
-                    op_id = self.operations_voc_rev[op_name]
-                    if op_id + 1 == len(self.operations_voc.keys()):
-                        op_id = 0
-                    else:
-                        op_id += 1
-                    neg_example = neg_premise[op_name][0]["res"] #[op_name][0]["res"]
-                    neg_example1 = neg_premise[self.operations_voc[op_id]][0]["res"]
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
-                    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example1, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
-                    #formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": step["positive"] + " " + step["variable"], "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})                    
-                    #for negative in step["negatives"]:
-                    #    if count_neg == neg:
-                    #        break
-                    #    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": negative, "operation": self.opereations_voc_rev[step["operation_name"]], "label": -1.0})
-                    #    count_neg += 1
+                    for neg_example in step["intra_negatives"]:
+                        formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    for neg_example in step["cross_negatives"]:
+                        formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
                 #SIMPY
                 else:
                     for negative in step["srepr_negatives"]:
