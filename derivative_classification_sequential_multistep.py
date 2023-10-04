@@ -84,7 +84,7 @@ class Experiment:
             logits_metric = {}
             label_metric = {}
             batch_index = 0
-            max_batch = 100
+            max_batch = 1000
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
                 for inference_step in eval_batch["steps"]:
@@ -187,6 +187,6 @@ if __name__ == '__main__':
             model = args.model,
             trans = True,
             one_hot = False,
-            load_model_path = "models/transformer_True_False_6_512",
+            load_model_path = "models/rnn_True_False_6_768",
             )
     experiment.evaluation()

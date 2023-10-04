@@ -159,8 +159,8 @@ class DataModelMultiStep:
             formatted_example["idx"] = example_id
             formatted_example["steps"] = {}
             for step in example["steps"]:
-                if len(step["negatives"]) == 0:
-                    continue
+                #if len(step["negatives"]) == 0:
+                #    continue
                 op_name = step["operation_name"]
                 if not str(step_count) in formatted_example["steps"]:
                     formatted_example["steps"][str(step_count)] = []
@@ -174,10 +174,12 @@ class DataModelMultiStep:
                 count_neg = 0
                 #LATEX
                 if not srepr:
-                    for neg_example in step["intra_negatives"]:
-                        formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    #for neg_example in step["intra_negatives"]:
+                    #    formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    #    break
                     for neg_example in step["cross_negatives"]:
                         formatted_example["steps"][str(step_count)].append({"equation1": step["premise_expression"], "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                        break
                 #SIMPY
                 else:
                     for negative in step["srepr_negatives"]:
