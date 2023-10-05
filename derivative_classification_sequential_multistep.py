@@ -9,6 +9,7 @@ from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassifi
 from torch.utils.data import DataLoader
 from latent_reasoning.data_model import DataModelMultiStep
 from latent_reasoning.sequential_utils import *
+from latent_reasoning.gnn_utils_graph import Corpus as GraphCorpus
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
     
@@ -24,11 +25,16 @@ class Experiment:
         #load pretrained vocabulary
         self.operations_voc = pickle.load(open(load_model_path + "/operations", "rb"))
         self.vocabulary =  pickle.load(open(load_model_path + "/vocabulary", "rb"))
+        print(self.vocabulary)
         #LOAD DATA
-        self.corpus = Corpus(self.max_length, build_voc = False)
-        self.corpus.dictionary.word2idx = self.vocabulary
+        if self.model_type[:3] == 'gnn':
+            self.corpus = GraphCorpus(self.max_length)
+            self.vocabulary = self.corpus.node_dict
+        else:
+            self.corpus = Corpus(self.max_length, build_voc = False)
+            self.corpus.dictionary.word2idx = self.vocabulary
         self.tokenizer = self.corpus.tokenizer
-        self.data_model = DataModelMultiStep(neg, self.operations_voc, self.tokenize_function)
+        self.data_model = DataModelMultiStep(neg, self.operations_voc, self.tokenize_function, srepr=(self.model_type[:3] == 'gnn'))
         self.eval_dict = self.data_model.eval_dict
         #LOAD METRICS AND MODEL
         self.metric = evaluate.load("glue", "mrpc")
@@ -57,9 +63,6 @@ class Experiment:
 
     def compute_metrics(self, eval_pred):
         logits, labels = eval_pred
-        #majority_class_preds = [1 for pred in logits]
-        #majority_baseline_score = self.metric.compute(predictions=majority_class_preds, references=labels)
-        #print("majority_class_baseline:", majority_baseline_score)
         score = self.metric.compute(predictions=logits, references=labels)
         return score
 

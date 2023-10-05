@@ -192,3 +192,77 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, src_key_padding_mask = src_mask)
         output = self.mean_pooling(output, src_mask)
         return output
+
+#============================================================== GNN ENCODERS ======================================================================
+class GNNModel(nn.Module):
+    """Container module with an encoder, a transformer module, and mean pooling.
+       https://github.com/pytorch/examples/blob/main/word_language_model/model.py
+    """
+
+    def __init__(self, ntoken, device, gnn_type='gnn_GAT_direct', ninp=768, nhead=8, nhid=768, nlayers=6, dropout=0.1):
+        super(GNNModel, self).__init__()
+        from torch_geometric.nn import GATConv, GCNConv, GraphSAGE, TransformerConv
+        self.device = device
+        self.node_embedding = nn.Embedding(ntoken, ninp)
+        self.gnn = nn.ModuleList()
+        assert len(gnn_type.split('_')) == 3
+        _, self.layer_type, self.direct = gnn_type.split('_')
+        assert self.direct in ['direct', 'undirect']
+        if self.layer_type == 'GAT':
+            self.gnn.append(GATConv(in_channels=ninp, out_channels=int(nhid / nhead), heads=nhead, dropout=dropout))
+            # hidden layers
+            for _ in range(1, nlayers):
+                # due to multi-head, the in_dim = num_hidden * num_heads
+                self.gnn.append(GATConv(in_channels=nhid, out_channels=int(nhid / nhead), heads=nhead, dropout=dropout))
+        elif self.layer_type == 'GCN':
+            self.gnn.append(GCNConv(in_channels=ninp, out_channels=nhid, dropout=dropout))
+            for _ in range(1, nlayers):
+                self.gnn.append(GCNConv(in_channels=nhid, out_channels=nhid, dropout=dropout))
+        elif self.layer_type == 'GraphSAGE':
+            self.gnn.append(GraphSAGE(
+                in_channels=ninp, hidden_channels=nhid, num_layers=nlayers, out_channels=nhid, dropout=dropout))
+        else:
+            raise ValueError(f'{self.layer_type} is not supported, please choose from GAT, GCN, or GraphSAGE for gnn_type.')
+
+        self.ninp = ninp
+
+    def all_to_one_graph(self, src):
+        nodes_all = []
+        edges_all = []
+        pos = [0]
+        for i in range(src['nodes'].shape[0]):
+            edges = (src['edges'][i] + len(nodes_all)).cpu().numpy().tolist()
+            if len(nodes_all) - 1 in edges:
+                edges = edges[:edges.index(len(nodes_all) - 1)]
+            edges_all += edges
+
+            nodes = src['nodes'][i].cpu().numpy().tolist()
+            if -1 in nodes:
+                nodes = nodes[:nodes.index(-1)]
+            if edges:
+                assert max(edges) < len(nodes) + len(nodes_all)
+            nodes_all += nodes
+
+            pos.append(len(nodes_all))
+
+        nodes_all = torch.tensor(nodes_all).to(self.device)
+        edges_all = torch.tensor(edges_all, dtype=torch.int64).reshape(-1, 2).T.to(self.device)
+        if self.direct == 'undirect':
+            edges_all = torch.cat([edges_all, edges_all.flip(dims=(0,))], dim=1)
+        return nodes_all, edges_all, pos
+
+    def forward(self, src):
+        nodes, edge_index, pos = self.all_to_one_graph(src)
+        output = []
+        x = self.node_embedding(nodes)
+        first_layer = True
+        for layer in self.gnn:
+            if not first_layer:
+                # apply non linearity
+                x = F.relu(x)
+            x = layer(x=x, edge_index=edge_index)
+            first_layer = False
+        for i in range(len(pos) - 1):
+            output.append(torch.mean(x[pos[i]:pos[i + 1]], dim=0))
+        output = torch.stack(output, dim=0)
+        return output
