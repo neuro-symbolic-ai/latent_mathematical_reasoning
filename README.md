@@ -43,3 +43,4 @@ Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv
 - Specializing Smaller Language Models towards Multi-Step Reasoning
 - NEURAL NETWORKS AND THE CHOMSKY HIERARCHY
 - Underspecification Presents Challenges for Credibility in Modern Machine Learning
+- TRIGO: Benchmarking Formal Mathematical Proof Reduction for Generative Language Models
