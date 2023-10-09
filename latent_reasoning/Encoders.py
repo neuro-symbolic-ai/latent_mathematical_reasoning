@@ -10,7 +10,7 @@ from torch.autograd import Variable
 
 class RNNModel(nn.Module):
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 300, nhid = 300, nlayers = 2, dropout=0.1):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 512, nhid = 512, nlayers = 2, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
@@ -54,7 +54,7 @@ class CNNModel(nn.Module):
     """An 1D Convulational Neural Network for Sentence Classification.
        https://colab.research.google.com/drive/1b7aZamr065WPuLpq9C4RU6irB59gbX_K#scrollTo=ejGLw8TKViBY
     """
-    def __init__(self, ntoken, device, ninp = 300, nhid = 300, filter_sizes=[3, 4, 5], num_filters=[100, 100, 100], dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 768, nhid = 768, filter_sizes=[3, 4, 5], num_filters=[100, 100, 100], dropout=0.1):
         super(CNNModel, self).__init__()            
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
@@ -159,7 +159,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 512, nhead = 8, nhid = 2048, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 2048, nlayers = 6, dropout=0.1):
 
         super(TransformerModel, self).__init__()
         try:

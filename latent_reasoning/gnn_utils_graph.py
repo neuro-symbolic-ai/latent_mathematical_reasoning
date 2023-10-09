@@ -52,24 +52,28 @@ def expression_to_tree(expression):
     return Node(expression[:first_left_bracket], sub_expressions)
 
 
-def tree_to_graph(node_dict, node_counter, node_list, edge_list, node, parent_index=None):
+def tree_to_graph(node_dict, node_counter, node_list, edge_list, node, parent_index=None, build_voc = True):
     if node.value not in node_dict.keys():
-        node_dict[node.value] = len(node_dict)
-        node_counter[node.value] = 0
+        if build_voc == False: 
+           node.value = "[UNK]"
+        else:
+            node_dict[node.value] = len(node_dict)
+            node_counter[node.value] = 0
     node_list.append(f'{node.value}#{node_counter[node.value]}')
     if parent_index is not None:
         edge_list += [parent_index, len(node_list) - 1]
     node_counter[node.value] += 1
     parent_index = len(node_list) - 1
     for n in node.child:
-        tree_to_graph(node_dict, node_counter, node_list, edge_list, n, parent_index)
+        tree_to_graph(node_dict, node_counter, node_list, edge_list, n, parent_index, build_voc)
 
 
 class Corpus(object):
-    def __init__(self, max_len=128):
-        self.node_dict = {}
+    def __init__(self, max_len=128, build_voc = True):
+        self.node_dict = {"[UNK]":0}
         self.max_nodes = max_len
         self.max_edges = 2 * self.max_nodes - 2
+        self.build_voc = build_voc
 
     def tokenizer(self, sreprs):
         graphs = []
@@ -77,7 +81,7 @@ class Corpus(object):
             node_counter = {k: 0 for k in self.node_dict.keys()}
             node_list = []
             edge_list = []
-            tree_to_graph(self.node_dict, node_counter, node_list, edge_list, expression_to_tree(srepr))
+            tree_to_graph(self.node_dict, node_counter, node_list, edge_list, expression_to_tree(srepr), build_voc = self.build_voc)
             for i in range(len(node_list)):
                 node_list[i] = self.node_dict[node_list[i].split('#')[0]]
             node_list = node_list + [-1] * (self.max_nodes - len(node_list)) if len(node_list) <= self.max_nodes else node_list[:self.max_nodes]

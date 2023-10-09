@@ -264,7 +264,7 @@ if __name__ == '__main__':
             max_length = args.max_length,
             epochs = args.epochs, 
             model = args.model,
-            trans = False,
+            trans = True,
             one_hot = False,
             #load_model_path = "models/rnn_best_dev_set_6.pt",
             #do_train = False,

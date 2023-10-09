@@ -167,9 +167,11 @@ class DataModelMultiStep:
                 #for neg_example in step[prefix+"intra_negatives"]:
                 #    formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
                 #    break
-                for neg_example in step[prefix+"cross_negatives"]:
+                if len(step[prefix+"cross_negatives"]) != 4:
+                    print(len(step[prefix+"cross_negatives"]))
+                for neg_example in step[prefix+"cross_negatives"][:2]:
                     formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
-                    break
+                    #break
                 step_count += 1
             tot_formatted_examples.append(formatted_example)
         dataset = Dataset.from_list(tot_formatted_examples)

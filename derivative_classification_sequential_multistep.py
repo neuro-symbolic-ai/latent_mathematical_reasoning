@@ -28,8 +28,8 @@ class Experiment:
         print(self.vocabulary)
         #LOAD DATA
         if self.model_type[:3] == 'gnn':
-            self.corpus = GraphCorpus(self.max_length)
-            self.vocabulary = self.corpus.node_dict
+            self.corpus = GraphCorpus(self.max_length, build_voc = False)
+            self.corpus.node_dict = self.vocabulary
         else:
             self.corpus = Corpus(self.max_length, build_voc = False)
             self.corpus.dictionary.word2idx = self.vocabulary
@@ -44,10 +44,10 @@ class Experiment:
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoningSeq(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoningSeq(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
@@ -108,7 +108,6 @@ class Experiment:
                         target = item["target"]
                         labels = item["label"]
                         operation = item['operation']
-                        #print(item)
                         if inference_step == "0":
                             outputs = self.model.inference_step(None, equation1, None, target, operation, labels)
                         else:
@@ -190,6 +189,6 @@ if __name__ == '__main__':
             model = args.model,
             trans = True,
             one_hot = False,
-            load_model_path = "models/rnn_True_False_6_768",
+            load_model_path = "models/gnn_GCN_undirect_True_False_6_768",
             )
     experiment.evaluation()

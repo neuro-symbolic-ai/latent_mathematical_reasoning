@@ -275,7 +275,7 @@ if __name__ == '__main__':
             model = args.model,
             trans = True,
             one_hot = False,
-            load_model_path = "models/cnn_True_False_6_300",
+            load_model_path = "models/gnn_GCN_undirect_True_False_6_300",
             #do_train = False,
             #do_test = True
             )
