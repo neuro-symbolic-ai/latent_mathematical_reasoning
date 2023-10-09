@@ -40,4 +40,7 @@ Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv
 - Teaching Arithmetic to Small Transformers
 - Reasoning or Reciting? Exploring the Capabilities and Limitations of Language Models Through Counterfactual Tasks
 - Generalization on the unseen, logic reasoning and degree curriculum
-- Specializing Smaller Language Models towards Multi-Step Reasoning 
+- Specializing Smaller Language Models towards Multi-Step Reasoning
+- NEURAL NETWORKS AND THE CHOMSKY HIERARCHY
+- Underspecification Presents Challenges for Credibility in Modern Machine Learning
+- TRIGO: Benchmarking Formal Mathematical Proof Reduction for Generative Language Models
