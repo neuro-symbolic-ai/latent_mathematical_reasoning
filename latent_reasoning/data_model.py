@@ -144,9 +144,14 @@ class DataModelMultiStep:
 
     def process_dataset(self, dataset_path = "data/multiple_steps.json", neg = 1, srepr = False):
         #convert dataset into json for dataset loader
+        d_file_premises = open(self.premise_dataset_path, 'r')
+        d_json_premises = json.load(d_file_premises)
+        max_train_examples = 12800
+        max_dev_examples = 500
         d_file = open(dataset_path, 'r')
         d_json = json.load(d_file)
         prefix = 'srepr_' if srepr else ''
+
         # create an entry for each positive example
         tot_formatted_examples = []
         example_id = 0
@@ -163,15 +168,17 @@ class DataModelMultiStep:
                 premise = step[prefix+"premise_expression"]
                 positive = step[prefix+"positive"]
                 formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": positive, "operation": self.operations_voc_rev[step["operation_name"]], "label": 1.0})
-                #NEGATIVE EXAMPLES
-                #for neg_example in step[prefix+"intra_negatives"]:
-                #    formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
-                #    break
-                if len(step[prefix+"cross_negatives"]) != 4:
-                    print(len(step[prefix+"cross_negatives"]))
+                #CROSS NEGATIVES
                 for neg_example in step[prefix+"cross_negatives"][:2]:
                     formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
-                    #break
+                #IN-OPERATION NEGATIVE EXAMPLES
+                num_negs = 1
+                neg_index = max_train_examples + max_dev_examples + 1
+                neg_premises = d_json_premises[neg_index:neg_index+num_negs]
+                negative_examples = []
+                for neg in neg_premises:
+                    for res in neg[prefix+step["operation_name"]][:2]:
+                            formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": res["res"], "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})                    
                 step_count += 1
             tot_formatted_examples.append(formatted_example)
         dataset = Dataset.from_list(tot_formatted_examples)
