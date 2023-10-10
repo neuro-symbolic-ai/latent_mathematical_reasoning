@@ -23,6 +23,8 @@ class LatentReasoningSeq(nn.Module):
             self.encoder = RNNModel(n_tokens, device).to(device)
         elif model_type == "cnn":
             self.encoder = CNNModel(n_tokens, device).to(device)
+        elif model_type[:3] == "gnn":
+            self.encoder = GNNModel(n_tokens, device, gnn_type=model_type).to(device)
         
         self.dim = self.encoder.ninp
         
