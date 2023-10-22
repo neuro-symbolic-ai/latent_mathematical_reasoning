@@ -32,7 +32,8 @@ Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv
 - LIME: Learning Inductive Bias for Primitives of Mathematical Reasoning
 - https://openreview.net/forum?id=pbUcKxmiM54
 - Faith and Fate: Limits of Transformers on Compositionality
-- Deductive Additivity for Planning of Natural Language Proofs: https://github.com/Zayne-sprague/Deductive_Additivity_for_Planning_of_Natural_Language_Proofs
+- Deductive Additivity for Planning of Natural Language Proofs
+- https://github.com/Zayne-sprague/Deductive_Additivity_for_Planning_of_Natural_Language_Proofs
 - Grokking of Hierarchical Structure in Vanilla Transformers
 - Towards understanding grokking: An effective theory of representation learning
 - Learning Neural PDE Solvers with Parameter-Guided Channel Attention
