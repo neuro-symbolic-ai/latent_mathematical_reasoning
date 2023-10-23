@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
-from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoning
-from latent_reasoning.BaselinesSequential import LatentReasoning
+from latent_reasoning.Translational import TransLatentReasoning
+from latent_reasoning.Projection import LatentReasoning
 from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
 
 class Experiment:
