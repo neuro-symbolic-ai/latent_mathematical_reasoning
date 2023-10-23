@@ -11,8 +11,8 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
-from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
-from latent_reasoning.BaselinesSequential import LatentReasoningSeq
+from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoning
+from latent_reasoning.BaselinesSequential import LatentReasoning
 from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
 
 class Experiment:
@@ -46,10 +46,10 @@ class Experiment:
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoning(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoning(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))

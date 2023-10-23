@@ -10,11 +10,10 @@ from torch.utils.data import DataLoader
 from latent_reasoning.data_model import DataModelMultiStep
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.gnn_utils_graph import Corpus as GraphCorpus
-from latent_reasoning.BaselinesSequential import LatentReasoningSeq
-from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
+from latent_reasoning.Projection import LatentReasoning
+from latent_reasoning.Translational import TransLatentReasoning
     
 class Experiment:
-
     def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, one_hot = False, load_model_path = None):
         self.model_type = model
         self.epochs = epochs
@@ -44,10 +43,10 @@ class Experiment:
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoning(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoning(len(self.vocabulary), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
