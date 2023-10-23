@@ -50,14 +50,10 @@ class TransLatentReasoningSeq(nn.Module):
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
         embeddings_eq1 = self.encoder(equation1)
-        
-        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
         features = embeddings_eq1
         embeddings_output = self.linear(features)
 
@@ -80,9 +76,10 @@ class TransLatentReasoningSeq(nn.Module):
 
     def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
-        operation = operation.to(self.device)
-        Wo = self.Wo[operation]
-        ov = self.ov(operation)
+        if operation != None:
+            operation = operation.to(self.device)
+            Wo = self.Wo[operation]
+            ov = self.ov(operation)
 
         # ENCODE EQUATIONS
         if equation1 != None:
@@ -90,25 +87,25 @@ class TransLatentReasoningSeq(nn.Module):
             embeddings_eq1 = self.encoder(equation1)
         else:
             embeddings_eq1 = prev_step
-        
-        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        #features = torch.cat([embeddings_eq1, embeddings_eq2, embeddings_eq1 * embeddings_eq2], 1)
         features = embeddings_eq1
         embeddings_output = self.linear(features)
 
         #TRANSLATIONAL MODEL
-        embeddings_output = embeddings_output * Wo
-        embeddings_target = embeddings_target + ov
+        if operation != None:
+            embeddings_output = embeddings_output * Wo
+            embeddings_target = embeddings_target + ov
 
         #COMPUTE SCORES
         scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)
 
-        return scores, embeddings_output - ov
+        if operation != None:
+            embeddings_output = embeddings_output - ov
+
+        return scores, embeddings_output
 
 
     def encode(self, expression, operation, is_premise):

@@ -56,9 +56,6 @@ class LatentReasoningSeq(nn.Module):
         # ENCODE EQUATIONS
         equation1 = {k: v.to(self.device) for k, v in equation1.items()}
         embeddings_eq1 = self.encoder(equation1)
-        
-        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
@@ -81,11 +78,12 @@ class LatentReasoningSeq(nn.Module):
 
     def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
         # GET OPERATION EMBEDDINGS
-        operation = operation.to(self.device)
-        if self.one_hot:
-            ov = self.ov[operation]
-        else:
-            ov = self.ov(operation)
+        if operation != None:
+            operation = operation.to(self.device)
+            if self.one_hot:
+                ov = self.ov[operation]
+            else:
+                ov = self.ov(operation)
 
         # ENCODE EQUATIONS
         if equation1 != None:
@@ -93,15 +91,15 @@ class LatentReasoningSeq(nn.Module):
             embeddings_eq1 = self.encoder(equation1)
         else:
             embeddings_eq1 = prev_step
-        
-        #equation2 = {k: v.to(self.device) for k, v in equation2.items()}
-        #embeddings_eq2 = self.encoder(equation2)
 
         target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
         embeddings_target = self.encoder(target_equation)
 
-        features = torch.cat([ov, embeddings_eq1], 1)
-        embeddings_output = self.linear(features)
+        if operation != None:
+            features = torch.cat([ov, embeddings_eq1], 1)
+            embeddings_output = self.linear(features)
+        else:
+            embeddings_output = embeddings_eq1
 
         #COMPUTE SCORES
         scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)

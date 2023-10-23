@@ -11,13 +11,14 @@ from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
+from latent_reasoning.gnn_utils_graph import Corpus as GraphCorpus
 from latent_reasoning.TranslationalReasoningSequential import TransLatentReasoningSeq
 from latent_reasoning.BaselinesSequential import LatentReasoningSeq
 from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
 
 class Experiment:
 
-    def __init__(self, learning_rate, model, epochs, batch_size, max_length, neg, trans = True, one_hot = False, load_model_path = None, do_train = True, do_test = False):
+    def __init__(self, learning_rate, model, epochs, batch_size, max_length, trans = True, one_hot = False, load_model_path = None):
         self.model_type = model
         print("Model:", self.model_type)
         self.epochs = epochs
@@ -31,29 +32,38 @@ class Experiment:
             #load pretrained vocabulary
             self.operations_voc = pickle.load(open(load_model_path + "/operations", "rb"))
             self.vocabulary =  pickle.load(open(load_model_path + "/vocabulary", "rb"))
-            self.corpus = Corpus(self.max_length, build_voc = False)
-            self.corpus.dictionary.word2idx = self.vocabulary
+            if self.model_type[:3] == 'gnn':
+                self.corpus = GraphCorpus(self.max_length, build_voc = False)
+                self.corpus.node_dict = self.vocabulary
+            else:
+                self.corpus = Corpus(self.max_length, build_voc = False)
+                self.corpus.dictionary.word2idx = self.vocabulary
         else:
-            self.corpus = Corpus(self.max_length)
+            if self.model_type[:3] == 'gnn':
+                self.corpus = GraphCorpus(self.max_length)
+            else:
+                self.corpus = Corpus(self.max_length)
         self.tokenizer = self.corpus.tokenizer
-        self.data_model = DataModel(neg, do_train, do_test, self.tokenize_function_train, self.tokenize_function_eval)
+        self.data_model = DataModel(self.tokenize_function_train, self.tokenize_function_eval, srepr=(self.model_type[:3] == 'gnn'))
         self.train_dataset = self.data_model.train_dataset
         self.eval_dict = self.data_model.eval_dict
         if load_model_path is None:
             self.operations_voc = self.data_model.operations_voc
-            self.vocabulary = self.corpus.dictionary.word2idx
+            if self.model_type[:3] == 'gnn':
+                self.vocabulary = self.corpus.node_dict
+            else:
+                self.vocabulary = self.corpus.dictionary.word2idx
         #LOAD METRICS AND MODEL
-        self.metric = evaluate.load("glue", "mrpc")
         self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
         #create model
         if self.trans:
             #translational model
-            self.model = TransLatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type)
+            self.model = TransLatentReasoningSeq(len(self.vocabulary()), self.num_ops, self.device, model_type = self.model_type)
         else:
             #baseline
-            self.model = LatentReasoningSeq(len(self.corpus.dictionary.word2idx.keys()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
+            self.model = LatentReasoningSeq(len(self.vocabulary()), self.num_ops, self.device, model_type = self.model_type, one_hot = one_hot)
         if load_model_path is not None:
             #load pretrained model
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
@@ -68,11 +78,6 @@ class Experiment:
         examples["negative"] = self.tokenizer(examples["negative"]) 
         return examples
 
-    def compute_metrics(self, eval_pred):
-        logits, labels = eval_pred
-        score = self.metric.compute(predictions=logits, references=labels)
-        return score
-
     def train_and_eval(self):
         device = self.device
         self.model.to(device)
@@ -82,7 +87,6 @@ class Experiment:
         optim = AdamW(self.model.parameters(), lr=self.learning_rate)
         #TRAINING CYCLE
         print("Start training...")
-        eval_steps_cycle = 2000
         steps = 0
         for epoch in tqdm(range(self.epochs), desc = "Training"):
             self.model.train()
@@ -98,8 +102,6 @@ class Experiment:
                 loss = outputs[0]
                 loss.backward()
                 optim.step()
-                #evaluation
-                #if steps % eval_steps_cycle == 0:
             #DEV EVALUATION
             self.model.eval()
             self.evaluation(steps)
@@ -243,8 +245,6 @@ class Experiment:
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
-                    help="Which dataset to use")
     parser.add_argument("--model", type=str, default="transformer", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=64, nargs="?",
@@ -255,30 +255,37 @@ if __name__ == '__main__':
                     help="Num epochs.")
     parser.add_argument("--lr", type=float, default=1e-5, nargs="?",
                     help="Learning rate.")
-    parser.add_argument("--neg", type=int, default=1, nargs="?",
-                    help="Max number of negative examples")
 
     args = parser.parse_args()
-    dataset = args.dataset
     torch.backends.cudnn.deterministic = True 
     seed = 42
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available:
         torch.cuda.manual_seed_all(seed)
-    experiment = Experiment(
-            learning_rate = args.lr, 
-            batch_size = args.batch_size, 
-            neg = args.neg,
-            max_length = args.max_length,
-            epochs = args.epochs,
-            model = args.model,
-            trans = True,
-            one_hot = False,
-            load_model_path = "models/gnn_GCN_undirect_True_False_6_300",
-            #do_train = False,
-            #do_test = True
-            )
-    #experiment.train_and_eval()
-    experiment.model.eval()
-    experiment.evaluation(0, eval_type = "test", save_best_model = False)
+    # SET PRE-TRAINED MODEL PATH FOR EVALUATION, NONE FOR TRAINING 
+    model_path = "models/gnn_GCN_undirect_True_False_6_300"
+    if model_path == None:
+        experiment = Experiment(
+                learning_rate = args.lr, 
+                batch_size = args.batch_size, 
+                max_length = args.max_length,
+                epochs = args.epochs,
+                model = args.model,
+                trans = True,
+                one_hot = False
+                )
+        experiment.train_and_eval()
+    else:
+        experiment = Experiment(
+                learning_rate = args.lr, 
+                batch_size = args.batch_size, 
+                max_length = args.max_length,
+                epochs = args.epochs,
+                model = args.model,
+                trans = True,
+                one_hot = False,
+                load_model_path = model_path
+                )
+        experiment.model.eval()
+        experiment.evaluation(0, eval_type = "test", save_best_model = False)
