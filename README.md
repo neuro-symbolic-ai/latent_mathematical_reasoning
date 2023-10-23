@@ -45,3 +45,4 @@ Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv
 - NEURAL NETWORKS AND THE CHOMSKY HIERARCHY
 - Underspecification Presents Challenges for Credibility in Modern Machine Learning
 - TRIGO: Benchmarking Formal Mathematical Proof Reduction for Generative Language Models
+- Towards Foundation Models for Knowledge Graph Reasoning
