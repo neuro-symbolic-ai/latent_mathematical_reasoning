@@ -271,7 +271,7 @@ if __name__ == '__main__':
             batch_size = args.batch_size, 
             neg = args.neg,
             max_length = args.max_length,
-            epochs = args.epochs, 
+            epochs = args.epochs,
             model = args.model,
             trans = True,
             one_hot = False,

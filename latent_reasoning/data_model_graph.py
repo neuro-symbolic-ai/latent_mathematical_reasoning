@@ -20,8 +20,8 @@ class DataModel:
         self.train_dataset = self.tokenized_train_dataset
         self.eval_dict["dev_set_cross"] = self.tokenized_dev_dataset_cross
         self.eval_dict["dev_set_in"] = self.tokenized_dev_dataset_in
-        #self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
-        #self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
+        self.eval_dict["test_set_cross"] = self.tokenized_test_dataset_cross
+        self.eval_dict["test_set_in"] = self.tokenized_test_dataset_in
 
     def process_dataset(self, dataset_path = "data/premises_dataset.json", operations = ["integrate", "differentiate", "add", "minus", "times", "divide"], neg = 1,  training = True, merge = True, test_size = 0.2, srepr = False):
         #load operation vocabulary
