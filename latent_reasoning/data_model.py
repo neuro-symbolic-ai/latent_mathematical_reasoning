@@ -44,7 +44,7 @@ class DataModel:
         max_test_examples = 1000
         # create a training set entry for each example
         for example in tqdm(d_json[:max_train_examples], desc= dataset_path):
-            premise = example["premise"]
+            premise = example[prefix+"premise"]
             for op in operations:
                 #POSITIVE EXAMPLES
                 for res in example[prefix+op]:
