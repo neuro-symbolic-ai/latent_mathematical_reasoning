@@ -40,6 +40,7 @@ Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv
 - How neural networks extrapolate: From feedforward to graph neural networks
 - Teaching Arithmetic to Small Transformers
 - Reasoning or Reciting? Exploring the Capabilities and Limitations of Language Models Through Counterfactual Tasks
+- What Algorithms can Transformers Learn? A Study in Length Generalization
 - Generalization on the unseen, logic reasoning and degree curriculum
 - Specializing Smaller Language Models towards Multi-Step Reasoning
 - NEURAL NETWORKS AND THE CHOMSKY HIERARCHY
