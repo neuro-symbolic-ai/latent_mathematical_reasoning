@@ -9,8 +9,16 @@ Our empirical analysis reveals that the multi-operational paradigm is crucial fo
 
 ![Image description](latent_math_reasoning.png)
 
+# Reproducibility
+
+Welcome! :) 
+
+In this repository, you can find the code (`latent_reasoning.py` and `latent_reasoning_multistep.py`) to reproduce the results obtained in our paper with different neural encoders and multi-operational paradigms.
+
 ## Synthetic Data
 
-The complete dataset generated using our methodology is available here:
+The complete dataset generated using our methodology (`premises_dataset.json`) is available here: https://drive.google.com/file/d/1YnTyE9KVSGonTSa2LzU3q0E4ntK8q-8u/view?usp=sharing
 
-The multi-step derivation data is available here:
+The multi-step derivation data (`multiple_steps.json`) is available here: https://drive.google.com/file/d/1chHdyLVCwNxCvuEQ9n13yRVUWDspGp2g/view?usp=sharing
+
+To start the experiments, download the datasets and store them in `./data`.
