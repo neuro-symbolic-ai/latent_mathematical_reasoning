@@ -1,49 +1,14 @@
-# latent_mathematical_reasoning
+# Multi-Operational Mathematical Derivations in Latent Space
 
-Data: https://drive.google.com/drive/folders/1M8XQOuzIL0GgRQjcnmtffUTX7qhWYuFk?usp=share_link
+This paper investigates the possibility of approximating multiple mathematical operations in latent space for expression derivation. To this end, we introduce different multi-operational representation paradigms, modelling mathematical operations as explicit geometric transformations. By leveraging a symbolic engine, we construct a large-scale dataset comprising 1.7M derivation steps stemming from 61K premises and 6 operators, analysing the properties of each paradigm when instantiated with state-of-the-art neural encoders.
 
-Results: https://docs.google.com/spreadsheets/d/1u81xRR2TSoWF1s0KlsL39ynImksZICKJcdZEIYqyTys/edit?usp=sharing 
-
-Paper: https://www.overleaf.com/3768452489nkvcsvqkfggv 
+Specifically, we investigate how different encoding mechanisms can approximate equational reasoning in latent space, exploring the trade-off between learning different operators and specialising within single operations, as well as the ability to support multi-step derivations and out-of-distribution generalisation.
+Our empirical analysis reveals that the multi-operational paradigm is crucial for disentangling different operators, while discriminating the conclusions for a single operation is achievable in the original expression encoder. Moreover, we show that architectural choices can heavily affect the training dynamics, structural organisation, and generalisation of the latent space, resulting in significant variations across paradigms and classes of encoders.
 
 ![Image description](latent_math_reasoning.png)
 
-## Related Work
-- Mthematical Reasoning in Latent Space
-- Symbolic Brittleness in Sequence Models: on Systematic Generalization in Symbolic Mathematics
-- A Symbolic Framework for Systematic Evaluation of Mathematical Reasoning with Transformers
-- HOList: An Environment for Machine Learning of Higher-Order Theorem Proving
-- Latent Action Space for Efficient Planning in Theorem Proving
-- Graph Representations for Higher-Order Logic and Theorem Proving
-- Can Neural Networks Learn Symbolic Rewriting?
-- MATHEMATICAL REASONING VIA SELF-SUPERVISED SKIP-TREE TRAINING
-- Learning to Reason in Large Theories without Imitation
-- ANALYSING MATHEMATICAL REASONING ABILITIES OF NEURAL MODELS
-- Neural Machine Translation for Mathematical Formulae
-- DEEP LEARNING FOR SYMBOLIC MATHEMATICS
-- https://github.com/Jan21/symbols-and-patterns
-- On the Paradox of Learning to Reason from Data
-- A Survey of Deep Learning for Mathematical Reasoning (https://github.com/lupantech/dl4math)
-- Systematic Generalization and Emergent Structures in Transformers Trained on Structured Tasks
-- The Devil is in the Detail: Simple Tricks Improve Systematic Generalization of Transformers
-- Testing the General Deductive Reasoning Capacity of Large Language Models Using OOD Examples
-- A Causal Framework to Quantify the Robustness of Mathematical Reasoning with Language Models
-- Large Language Models are In-Context Semantic Reasoners rather than Symbolic Reasoners
-- LIME: Learning Inductive Bias for Primitives of Mathematical Reasoning
-- https://openreview.net/forum?id=pbUcKxmiM54
-- Faith and Fate: Limits of Transformers on Compositionality
-- Deductive Additivity for Planning of Natural Language Proofs
-- https://github.com/Zayne-sprague/Deductive_Additivity_for_Planning_of_Natural_Language_Proofs
-- Grokking of Hierarchical Structure in Vanilla Transformers
-- Towards understanding grokking: An effective theory of representation learning
-- Learning Neural PDE Solvers with Parameter-Guided Channel Attention
-- How neural networks extrapolate: From feedforward to graph neural networks
-- Teaching Arithmetic to Small Transformers
-- Reasoning or Reciting? Exploring the Capabilities and Limitations of Language Models Through Counterfactual Tasks
-- What Algorithms can Transformers Learn? A Study in Length Generalization
-- Generalization on the unseen, logic reasoning and degree curriculum
-- Specializing Smaller Language Models towards Multi-Step Reasoning
-- NEURAL NETWORKS AND THE CHOMSKY HIERARCHY
-- Underspecification Presents Challenges for Credibility in Modern Machine Learning
-- TRIGO: Benchmarking Formal Mathematical Proof Reduction for Generative Language Models
-- Towards Foundation Models for Knowledge Graph Reasoning
+## Synthetic Data
+
+The complete dataset generated using our methodology is available here:
+
+The multi-step derivation data is available here:
