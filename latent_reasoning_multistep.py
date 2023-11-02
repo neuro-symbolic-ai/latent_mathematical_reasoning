@@ -72,7 +72,6 @@ class Experiment:
             logits_metric = {}
             label_metric = {}
             batch_index = 0
-            max_batch = 1000
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
                 for inference_step in eval_batch["steps"]:
@@ -109,8 +108,6 @@ class Experiment:
                         label_metric[inference_step].append(1)
                     else:
                         label_metric[inference_step].append(0)
-                if batch_index > max_batch:
-                    break
                 batch_index += 1
             eval_metrics = {}
             positive_avg = {}
