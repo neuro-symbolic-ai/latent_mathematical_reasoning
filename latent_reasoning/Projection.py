@@ -1,10 +1,6 @@
-from transformers import AutoTokenizer, AutoModel
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-import numpy as np
-import math
-from torch.autograd import Variable
 from sentence_transformers import util
 from latent_reasoning.Encoders import *
 
@@ -45,7 +41,7 @@ class LatentReasoning(nn.Module):
             self.loss_function = nn.CrossEntropyLoss()
 
         
-    def forward(self, equation1, equation2, target_equation, operation, labels):
+    def forward(self, premise, target_expression, operation, labels):
         # GET OPERATION EMBEDDINGS
         operation = operation.to(self.device)
         if self.one_hot:
@@ -54,13 +50,13 @@ class LatentReasoning(nn.Module):
             ov = self.ov(operation)
 
         # ENCODE EQUATIONS
-        equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-        embeddings_eq1 = self.encoder(equation1)
+        premise = {k: v.to(self.device) for k, v in premise.items()}
+        embeddings_premise = self.encoder(premise)
 
-        target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
-        embeddings_target = self.encoder(target_equation)
+        target_expression = {k: v.to(self.device) for k, v in target_expression.items()} 
+        embeddings_target = self.encoder(target_expression)
         
-        features = torch.cat([ov, embeddings_eq1], 1)
+        features = torch.cat([ov, embeddings_premise], 1)
         embeddings_output = self.linear(features)
 
         #COMPUTE LOSS
@@ -76,7 +72,7 @@ class LatentReasoning(nn.Module):
         return loss, scores, labels
 
 
-    def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
+    def inference_step(self, prev_step, premise, target_expression, operation):
         # GET OPERATION EMBEDDINGS
         if operation != None:
             operation = operation.to(self.device)
@@ -86,20 +82,20 @@ class LatentReasoning(nn.Module):
                 ov = self.ov(operation)
 
         # ENCODE EQUATIONS
-        if equation1 != None:
-            equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-            embeddings_eq1 = self.encoder(equation1)
+        if premise != None:
+            premise = {k: v.to(self.device) for k, v in premise.items()}
+            embeddings_premise = self.encoder(premise)
         else:
-            embeddings_eq1 = prev_step
+            embeddings_premise = prev_step
 
-        target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
-        embeddings_target = self.encoder(target_equation)
+        target_expression = {k: v.to(self.device) for k, v in target_expression.items()} 
+        embeddings_target = self.encoder(target_expression)
 
         if operation != None:
-            features = torch.cat([ov, embeddings_eq1], 1)
+            features = torch.cat([ov, embeddings_premise], 1)
             embeddings_output = self.linear(features)
         else:
-            embeddings_output = embeddings_eq1
+            embeddings_output = embeddings_premise
 
         #COMPUTE SCORES
         scores = nn.functional.cosine_similarity(embeddings_output, embeddings_target)

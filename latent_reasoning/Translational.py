@@ -1,10 +1,7 @@
 from transformers import AutoTokenizer, AutoModel
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import numpy as np
-import math
-from torch.autograd import Variable
 from sentence_transformers import util
 from latent_reasoning.Encoders import *
 
@@ -41,20 +38,20 @@ class TransLatentReasoning(nn.Module):
             self.similarity_fct = util.cos_sim #compute similarity for each possible pair in (a, b)
             self.loss_function = nn.CrossEntropyLoss()
         
-    def forward(self, equation1, equation2, target_equation, operation, labels):
+    def forward(self, premise, target_expression, operation, labels):
         # GET OPERATION EMBEDDINGS
         operation = operation.to(self.device)
         Wo = self.Wo[operation]
         ov = self.ov(operation)
 
         # ENCODE EQUATIONS
-        equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-        embeddings_eq1 = self.encoder(equation1)
+        premise = {k: v.to(self.device) for k, v in premise.items()}
+        embeddings_premise = self.encoder(premise)
 
-        target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
-        embeddings_target = self.encoder(target_equation)
+        target_expression = {k: v.to(self.device) for k, v in target_expression.items()} 
+        embeddings_target = self.encoder(target_expression)
 
-        features = embeddings_eq1
+        features = embeddings_premise
         embeddings_output = self.linear(features)
 
         #TRANSLATIONAL MODEL
@@ -74,7 +71,7 @@ class TransLatentReasoning(nn.Module):
         return loss, scores, labels
 
 
-    def inference_step(self, prev_step, equation1, equation2, target_equation, operation, labels):
+    def inference_step(self, prev_step, premise, target_expression, operation):
         # GET OPERATION EMBEDDINGS
         if operation != None:
             operation = operation.to(self.device)
@@ -82,16 +79,16 @@ class TransLatentReasoning(nn.Module):
             ov = self.ov(operation)
 
         # ENCODE EQUATIONS
-        if equation1 != None:
-            equation1 = {k: v.to(self.device) for k, v in equation1.items()}
-            embeddings_eq1 = self.encoder(equation1)
+        if premise != None:
+            premise = {k: v.to(self.device) for k, v in premise.items()}
+            embeddings_premise = self.encoder(premise)
         else:
-            embeddings_eq1 = prev_step
+            embeddings_premise = prev_step
 
-        target_equation = {k: v.to(self.device) for k, v in target_equation.items()} 
-        embeddings_target = self.encoder(target_equation)
+        target_expression = {k: v.to(self.device) for k, v in target_expression.items()} 
+        embeddings_target = self.encoder(target_expression)
 
-        features = embeddings_eq1
+        features = embeddings_premise
         embeddings_output = self.linear(features)
 
         #TRANSLATIONAL MODEL

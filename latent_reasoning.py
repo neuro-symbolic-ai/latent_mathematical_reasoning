@@ -1,12 +1,9 @@
 import os
-import json
 import pickle
 import argparse
 import torch
 import numpy as np
 from tqdm import tqdm
-import evaluate
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
@@ -14,7 +11,7 @@ from latent_reasoning.sequential_utils import *
 from latent_reasoning.gnn_utils_graph import Corpus as GraphCorpus
 from latent_reasoning.Translational import TransLatentReasoning
 from latent_reasoning.Projection import LatentReasoning
-from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
+from sklearn.metrics import average_precision_score
 
 class Experiment:
 
@@ -93,12 +90,11 @@ class Experiment:
             for batch in tqdm(train_loader):
                 steps += 1
                 optim.zero_grad()
-                equation1 = batch["equation1"]
-                equation2 = batch["equation2"]
+                premise = batch["premise"]
                 target = batch["target"]
                 labels = batch['label']
                 operation = batch['operation']
-                outputs = self.model(equation1, equation2, target, operation, labels)
+                outputs = self.model(premise, target, operation, labels)
                 loss = outputs[0]
                 loss.backward()
                 optim.step()
@@ -133,9 +129,7 @@ class Experiment:
             if not(eval_type == "dev" and "dev" in loader) and not(eval_type == "test" and not "dev" in loader):
                 continue
             eval_metrics[loader] = {}    
-            # TODO optimize for variable batch size
             eval_steps = 0
-            max_steps = 200
             avg_diff = []
             hit_1 = []
             hit_3 = []
@@ -264,7 +258,9 @@ if __name__ == '__main__':
     if torch.cuda.is_available:
         torch.cuda.manual_seed_all(seed)
     # SET PRE-TRAINED MODEL PATH FOR EVALUATION, NONE FOR TRAINING 
-    model_path = "models/gnn_GCN_undirect_True_False_6_300"
+    model_path = None
+    trans = True
+    one_hot = False
     if model_path == None:
         experiment = Experiment(
                 learning_rate = args.lr, 
@@ -272,8 +268,8 @@ if __name__ == '__main__':
                 max_length = args.max_length,
                 epochs = args.epochs,
                 model = args.model,
-                trans = True,
-                one_hot = False
+                trans = trans,
+                one_hot = one_hot
                 )
         experiment.train_and_eval()
     else:
@@ -283,8 +279,8 @@ if __name__ == '__main__':
                 max_length = args.max_length,
                 epochs = args.epochs,
                 model = args.model,
-                trans = True,
-                one_hot = False,
+                trans = trans,
+                one_hot = one_hot,
                 load_model_path = model_path
                 )
         experiment.model.eval()

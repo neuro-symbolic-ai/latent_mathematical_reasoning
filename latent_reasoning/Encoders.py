@@ -3,14 +3,11 @@ import torch.nn as nn
 import torch.nn.functional as F
 import numpy as np
 import math
-from torch.autograd import Variable
-
 
 # ============================================ RNN ENCODER ================================================
-
 class RNNModel(nn.Module):
 
-    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 512, nhid = 512, nlayers = 2, dropout=0.1):
+    def __init__(self, ntoken, device, rnn_type = "LSTM", ninp = 768, nhid = 768, nlayers = 2, dropout=0.1):
         super(RNNModel, self).__init__()
         self.ntoken = ntoken
         self.drop = nn.Dropout(dropout)
@@ -71,8 +68,6 @@ class CNNModel(nn.Module):
         # Fully-connected layer and Dropout
         self.fc = nn.Linear(np.sum(num_filters), nhid)
         self.dropout = nn.Dropout(p=dropout)
-
-        #self.init_weights()
         self.nhid = nhid
 
     def init_weights(self):
@@ -80,16 +75,6 @@ class CNNModel(nn.Module):
         nn.init.uniform_(self.encoder.weight, -initrange, initrange)
 
     def forward(self, input):
-        """Perform a forward pass through the network.
-
-        Args:
-            input_ids (torch.Tensor): A tensor of token ids with shape
-                (batch_size, max_sent_length)
-
-        Returns:
-            logits (torch.Tensor): Output logits with shape (batch_size,
-                n_classes)
-        """
         input_ids = input["input_ids"]
         # Get embeddings from `input_ids`. Output shape: (b, max_len, embed_dim)
         x_embed = self.encoder(input_ids)
@@ -111,7 +96,6 @@ class CNNModel(nn.Module):
 
 
 # ========================================= TRANSFORMER ENCODER ==============================================
-
 class PositionalEncoding(nn.Module):
     r"""Inject some information about the relative or absolute position of the tokens in the sequence.
         The positional encodings have the same dimension as the embeddings, so that the two can be summed.
@@ -159,7 +143,7 @@ class TransformerModel(nn.Module):
        https://github.com/pytorch/examples/blob/main/word_language_model/model.py
     """
 
-    def __init__(self, ntoken, device, ninp = 300, nhead = 6, nhid = 2048, nlayers = 6, dropout=0.1):
+    def __init__(self, ntoken, device, ninp = 768, nhead = 8, nhid = 2048, nlayers = 6, dropout=0.1):
 
         super(TransformerModel, self).__init__()
         try:
@@ -192,6 +176,7 @@ class TransformerModel(nn.Module):
         output = self.transformer_encoder(src, src_key_padding_mask = src_mask)
         output = self.mean_pooling(output, src_mask)
         return output
+
 
 #============================================================== GNN ENCODERS ======================================================================
 class GNNModel(nn.Module):

@@ -6,7 +6,6 @@ class Node:
         self.value = value
         self.child = child
 
-
 def expression_to_tree(expression):
     expression = expression.replace(' ', '')
     first_left_bracket = expression.find('(')

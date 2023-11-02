@@ -1,11 +1,8 @@
-import json
 import pickle
 import argparse
 import torch
 import numpy as np
 from tqdm import tqdm
-import evaluate
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
 from latent_reasoning.data_model import DataModelMultiStep
 from latent_reasoning.sequential_utils import *
@@ -35,9 +32,6 @@ class Experiment:
         self.tokenizer = self.corpus.tokenizer
         self.data_model = DataModelMultiStep(neg, self.operations_voc, self.tokenize_function, srepr=(self.model_type[:3] == 'gnn'))
         self.eval_dict = self.data_model.eval_dict
-        #LOAD METRICS AND MODEL
-        self.metric = evaluate.load("glue", "mrpc")
-        #self.eval_best_scores = {}
         self.device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
         self.num_ops = len(self.operations_voc.keys())
         #create model
@@ -60,22 +54,14 @@ class Experiment:
                 instance["equation1"], instance["equation2"], instance["target"] = self.tokenizer([instance["equation1"], instance["equation2"], instance["target"]])
         return examples
 
-    def compute_metrics(self, eval_pred):
-        logits, labels = eval_pred
-        score = self.metric.compute(predictions=logits, references=labels)
-        return score
-
     def evaluation(self, batch_size = 1):
         if self.eval_dict == None:
             print("No evaluation data found!")
             return
-        # TODO change negative examples in datamodel and frame task as retrieval
         #build dataloaders
         eval_loaders = {}
         for step in self.eval_dict:
             eval_loaders[step] = DataLoader(self.eval_dict[step].with_format("torch"), batch_size=batch_size, shuffle=False)
-            #if not step in self.eval_best_scores:
-            #    self.eval_best_scores[step] = {"accuracy": 0.0, "f1": 0.0}
         #START EVALUATION
         self.model.eval()
         print("EVALUATION")
@@ -90,7 +76,6 @@ class Experiment:
             for eval_batch in tqdm(eval_loaders[step], desc = str(step)):
                 inference_state = {}
                 for inference_step in eval_batch["steps"]:
-                    #print(inference_step, len(inference_state.keys()))
                     if not inference_step in scores_pos:
                         scores_pos[inference_step] = []
                     if not inference_step in scores_neg:
@@ -102,28 +87,17 @@ class Experiment:
                     item_index = 0
                     temp_score = {}
                     for item in eval_batch["steps"][inference_step]:
-                        equation1 = item["equation1"]
-                        equation2 = item["equation2"]
+                        premise = item["premise"]
                         target = item["target"]
                         labels = item["label"]
                         operation = item['operation']
                         if inference_step == "0":
-                            outputs = self.model.inference_step(None, equation1, None, target, operation, labels)
+                            outputs = self.model.inference_step(None, premise, target, operation, labels)
                         else:
-                            outputs = self.model.inference_step(inference_state[item_index], None, None, target, operation, labels)
+                            outputs = self.model.inference_step(inference_state[item_index], None, target, operation, labels)
                         inference_state[item_index] = outputs[1]
-                        #print(outputs[0])
                         for score in outputs[0]:
                             temp_score[item_index] = score
-                        #label_index = 0
-                        #for label in labels:
-                        #    if label == 1.0:
-                        #        scores_pos[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
-                        #        label_metric[inference_step].append(1)
-                        #    else:
-                        #        scores_neg[inference_step].append(outputs[0].detach().cpu().numpy()[label_index])
-                        #        label_metric[inference_step].append(0)
-                        #    label_index += 1
                         item_index += 1
                     hit = False
                     sorted_scores = dict(sorted(temp_score.items(), key=lambda item: item[1], reverse = True))
@@ -143,21 +117,16 @@ class Experiment:
             negative_avg = {}
             difference_avg = {}
             for inference_step in logits_metric:
-                eval_metrics[inference_step] =  np.mean(label_metric[inference_step]) #self.compute_metrics([logits_metric[inference_step], label_metric[inference_step]])
+                eval_metrics[inference_step] =  np.mean(label_metric[inference_step])
                 positive_avg[inference_step] = np.mean(scores_pos[inference_step])
                 negative_avg[inference_step] = np.mean(scores_neg[inference_step])
                 difference_avg[inference_step] = positive_avg[inference_step] - negative_avg[inference_step]
             #print results
             print("=============="+str(step)+"==============")
-            #print("positive avg sim:", positive_avg)
-            #print("negative avg sim:", negative_avg)
-            #print("difference:", difference_avg)
             print("evaluation scores:", eval_metrics)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument("--dataset", type=str, default="differentiation", nargs="?",
-                    help="Which dataset to use")
     parser.add_argument("--model", type=str, default="rnn", nargs="?",
                     help="Which model to use")
     parser.add_argument("--batch_size", type=int, default=8, nargs="?",
@@ -172,7 +141,6 @@ if __name__ == '__main__':
                     help="Max number of negative examples")
 
     args = parser.parse_args()
-    dataset = args.dataset
     torch.backends.cudnn.deterministic = True 
     seed = 42
     np.random.seed(seed)
@@ -188,6 +156,6 @@ if __name__ == '__main__':
             model = args.model,
             trans = True,
             one_hot = False,
-            load_model_path = "models/gnn_GCN_undirect_True_False_6_768",
+            load_model_path = "models/rnn_True_False_6_768",
             )
     experiment.evaluation()

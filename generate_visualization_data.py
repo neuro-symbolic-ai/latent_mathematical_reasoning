@@ -1,19 +1,14 @@
-import os
 import json
 import pickle
 import argparse
 import torch
 import numpy as np
 from tqdm import tqdm
-import evaluate
-from transformers import AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, TrainingArguments, Trainer
 from torch.utils.data import DataLoader
-from torch.optim import AdamW
 from latent_reasoning.data_model import DataModel
 from latent_reasoning.sequential_utils import *
 from latent_reasoning.Translational import TransLatentReasoning
 from latent_reasoning.Projection import LatentReasoning
-from sklearn.metrics import average_precision_score #, precision_recall_curve, ndcg_score, label_ranking_average_precision_score    
 
 class Experiment:
 
@@ -80,9 +75,7 @@ class Experiment:
         for loader in eval_loaders:
             if not(data_type == "dev" and "dev" in loader) and not(data_type == "test" and not "dev" in loader):
                 continue
-            # TODO optimize for variable batch size
             eval_steps = 0
-            max_steps = 1
             embeddings_data[loader] = {}
             embeddings_data_trans[loader] = {}
             for eval_batch in tqdm(eval_loaders[loader], desc = loader):
@@ -104,9 +97,6 @@ class Experiment:
                 for negative in negatives:
                     embeddings_data[loader][eval_steps]["negatives"].append(self.model.encode(negative, None, is_premise = False).detach().cpu().numpy()[0].tolist())
                     embeddings_data_trans[loader][eval_steps]["negatives"].append(self.model.encode(negative, operation, is_premise = False).detach().cpu().numpy()[0].tolist())
-                #if eval_steps > max_steps:
-                #    break
-        # TODO SAVE EMBEDDINGS TO FILE
         for dataset in embeddings_data:
             json.dump(embeddings_data[dataset], open(str(self.trans) + dataset + "_embeddings.json", "w"), indent = 5)
 
@@ -142,7 +132,7 @@ if __name__ == '__main__':
             model = args.model,
             trans = False,
             one_hot = False,
-            load_model_path = "models/cnn_False_False_6_300"
+            load_model_path = "models/transformer_False_False_6_300"
             )
     experiment.model.eval()
     experiment.generate_embeddings(data_type = "test")

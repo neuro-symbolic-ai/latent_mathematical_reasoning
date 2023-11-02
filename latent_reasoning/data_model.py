@@ -1,5 +1,4 @@
 import json
-import random
 from tqdm import tqdm
 from datasets import Dataset
     
@@ -49,7 +48,7 @@ class DataModel:
                 #POSITIVE EXAMPLES
                 for res in example[prefix+op]:
                     #LATEX
-                    formatted_examples_train.append({"equation1": premise, "equation2": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": 1.0})
+                    formatted_examples_train.append({"premise": premise, "variable": res["var"], "target": res["res"], "operation": self.opereations_voc_rev[op], "label": 1.0})
         for example in tqdm(d_json[max_train_examples: (max_train_examples + max_dev_examples)], desc= dataset_path):
             premise = example[prefix+"premise"]
             p_len = example["var_count"]
@@ -70,7 +69,6 @@ class DataModel:
                         negative_examples.append(res["res"])
                 formatted_examples_dev["cross_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})
                 #IN-OPERATION NEGATIVE EXAMPLES
-                #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
                 neg_index = max_train_examples + max_dev_examples + 1
                 neg_premises = d_json[neg_index:neg_index+num_negs]
                 negative_examples = []
@@ -100,7 +98,6 @@ class DataModel:
                         negative_examples.append(res["res"])
                 formatted_examples_test["cross_operation_negatives"].append({"premise": premise, "len": p_len, "operation": self.opereations_voc_rev[op], "positive": positive_examples, "negative": negative_examples})  
                 #IN-OPERATION NEGATIVE EXAMPLES
-                #neg_index = random.randint(max_train_examples + max_dev_examples + max_test_examples, len(d_json)-num_negs)
                 neg_index = max_train_examples + max_dev_examples + max_test_examples + 1
                 neg_premises = d_json[neg_index:neg_index+num_negs]
                 negative_examples = []
@@ -156,16 +153,16 @@ class DataModelMultiStep:
                     formatted_example["steps"][str(step_count)] = []
                 premise = step[prefix+"premise_expression"]
                 positive = step[prefix+"positive"]
-                formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": positive, "operation": self.operations_voc_rev[step["operation_name"]], "label": 1.0})
+                formatted_example["steps"][str(step_count)].append({"premise": premise, "variable": step['variable'], "target": positive, "operation": self.operations_voc_rev[step["operation_name"]], "label": 1.0})
                 #CROSS NEGATIVES
                 for neg_example in step[prefix+"cross_negatives"][:2]:
-                    formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
+                    formatted_example["steps"][str(step_count)].append({"premise": premise, "variable": step['variable'], "target": neg_example, "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})
                 #IN-OPERATION NEGATIVE EXAMPLES
                 neg_index = max_train_examples + max_dev_examples + 1
                 neg_premises = d_json_premises[neg_index:neg_index+num_negs]
                 for neg in neg_premises:
                     for res in neg[prefix+step["operation_name"]][:2]:
-                            formatted_example["steps"][str(step_count)].append({"equation1": premise, "equation2": step['variable'], "target": res["res"], "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})                    
+                            formatted_example["steps"][str(step_count)].append({"premise": premise, "variable": step['variable'], "target": res["res"], "operation": self.operations_voc_rev[step["operation_name"]], "label": -1.0})                    
                 step_count += 1
             tot_formatted_examples.append(formatted_example)
         dataset = Dataset.from_list(tot_formatted_examples)

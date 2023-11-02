@@ -54,21 +54,9 @@ if __name__ == '__main__':
         color = list(plt.cm.tab10.colors)
 
         plt.figure(figsize=(4, 4))
-        #plt.rcParams['font.family'] = 'Times New Roman'
         for i in range(0, len(labels)):
             plt.scatter(y_tsne[temp[i][0]:temp[i][1], 0], y_tsne[temp[i][0]:temp[i][1], 1],
                         marker=markers[i], label=labels[i], color=color[i])
         plt.legend(fontsize=10, markerscale=1.0)
-        #plt.title('T-SNE projection of one premise')
         plt.savefig(f'{json_file[:-5]}_tsne_{d}.png')
         plt.close()
-
-        #plt.figure(figsize=(5, 5))
-        #plt.rcParams['font.family'] = 'Times New Roman'
-        #for i in range(0, len(labels)):
-        #    plt.scatter(y_umap[temp[i][0]:temp[i][1], 0], y_umap[temp[i][0]:temp[i][1], 1],
-        #                marker=markers[i], label=labels[i], color=color[i])
-        #plt.legend(fontsize=10, markerscale=1.0)
-        #plt.title('UMAP projection of one premise')
-        #plt.savefig(f'{json_file[:-5]}_umap_{d}.png')
-        #plt.close()
