@@ -15,6 +15,8 @@ Welcome! :)
 
 In this repository, you can find the code (`latent_reasoning.py` and `latent_reasoning_multistep.py`) to reproduce the results obtained in our paper with different neural encoders and multi-operational paradigms.
 
+Keep in mind that this is experimental code subject to continuous optimisation and changes. If you have any questions, please send an email to `marco.valentino@idiap.ch`.
+
 ## Synthetic Data
 
 The complete dataset generated using our methodology (`premises_dataset.json`) is available here: https://drive.google.com/file/d/1YnTyE9KVSGonTSa2LzU3q0E4ntK8q-8u/view?usp=sharing
