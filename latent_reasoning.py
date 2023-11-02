@@ -195,8 +195,6 @@ class Experiment:
                     hit_5.append(1)
                 else:
                     hit_5.append(0)
-                #if eval_steps > max_steps:
-                #    break
             eval_metrics[loader]["map"] = np.mean(map_res)
             eval_metrics[loader]["hit@1"] = np.mean(hit_1)
             eval_metrics[loader]["hit@3"] = np.mean(hit_3)
