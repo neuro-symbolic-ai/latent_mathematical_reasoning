@@ -66,7 +66,7 @@ class Experiment:
             self.model.load_state_dict(torch.load(load_model_path + "/state_dict.pt"))
 
     def tokenize_function_train(self, examples):
-        examples["equation1"], examples["equation2"], examples["target"] = self.tokenizer([examples["equation1"], examples["equation2"], examples["target"]])
+        examples["premise"], examples["variable"], examples["target"] = self.tokenizer([examples["premise"], examples["variable"], examples["target"]])
         return examples
     
     def tokenize_function_eval(self, examples):

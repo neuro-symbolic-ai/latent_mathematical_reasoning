@@ -51,7 +51,7 @@ class Experiment:
                 examples["steps"][step] = []
                 continue
             for instance in examples["steps"][step]:
-                instance["equation1"], instance["equation2"], instance["target"] = self.tokenizer([instance["equation1"], instance["equation2"], instance["target"]])
+                instance["premise"], instance["variable"], instance["target"] = self.tokenizer([instance["premise"], instance["variable"], instance["target"]])
         return examples
 
     def evaluation(self, batch_size = 1):
