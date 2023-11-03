@@ -27,7 +27,7 @@ To start the experiments, download the datasets and store them in `./data`.
 
 #
 
-If you fins this repository useful, please consider citing our paper.
+If you find this repository useful, please consider citing our paper.
 
 ```
 @misc{valentino2023multioperational,
