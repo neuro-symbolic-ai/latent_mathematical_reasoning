@@ -13,7 +13,7 @@ Our empirical analysis reveals that the multi-operational paradigm is crucial fo
 
 Welcome! :) 
 
-In this repository, you can find the code (`latent_reasoning.py` and `latent_reasoning_multistep.py`) to reproduce the results obtained in our [paper](arxiv.org/abs/2311.01230) with different neural encoders and multi-operational paradigms.
+In this repository, you can find the code (`latent_reasoning.py` and `latent_reasoning_multistep.py`) to reproduce the results obtained in our [paper](www.arxiv.org/abs/2311.01230) with different neural encoders and multi-operational paradigms.
 
 Note that this repository contains experimental code subject to continuous optimisation and changes. If you have any questions, feel free to send an email to `marco.valentino@idiap.ch`.
 
