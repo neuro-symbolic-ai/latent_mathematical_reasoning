@@ -24,3 +24,17 @@ The complete dataset generated using our methodology (`premises_dataset.json`) i
 The multi-step derivation data (`multiple_steps.json`) is available here: https://drive.google.com/file/d/1chHdyLVCwNxCvuEQ9n13yRVUWDspGp2g/view?usp=sharing
 
 To start the experiments, download the datasets and store them in `./data`.
+
+#
+
+If you use this repository in your work, please consider citing our paper.
+
+```
+@misc{valentino2023multioperational,
+      title={Multi-Operational Mathematical Derivations in Latent Space}, 
+      author={Marco Valentino and Jordan Meadows and Lan Zhang and André Freitas},
+      year={2023},
+      eprint={2311.01230},
+      archivePrefix={arXiv},
+      primaryClass={cs.LG}
+}
