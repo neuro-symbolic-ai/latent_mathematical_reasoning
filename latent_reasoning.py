@@ -151,7 +151,7 @@ class Experiment:
                 operation = eval_batch["operation"]
                 p_len = eval_batch["len"].detach().cpu().numpy()[0]
                 for positive in positives:
-                    score = self.model.inference_step(None, premise, None, positive, operation, None)[0]
+                    score = self.model.inference_step(None, premise, positive, operation)[0]
                     score = score.detach().cpu().numpy()[0]
                     scores_pos.append(score)
                     scores_examples["pos_" + str(count_example)] = score
@@ -159,7 +159,7 @@ class Experiment:
                     true_relevance.append(1)
                     relevance_scores.append(score)
                 for negative in negatives:
-                    score = self.model.inference_step(None, premise, None, negative, operation, None)[0]
+                    score = self.model.inference_step(None, premise, negative, operation)[0]
                     score = score.detach().cpu().numpy()[0]
                     scores_neg.append(score)
                     scores_examples["neg_" + str(count_example)] = score
