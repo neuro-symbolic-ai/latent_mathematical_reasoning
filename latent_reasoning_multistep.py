@@ -91,9 +91,9 @@ class Experiment:
                         labels = item["label"]
                         operation = item['operation']
                         if inference_step == "0":
-                            outputs = self.model.inference_step(None, premise, target, operation, labels)
+                            outputs = self.model.inference_step(None, premise, target, operation)
                         else:
-                            outputs = self.model.inference_step(inference_state[item_index], None, target, operation, labels)
+                            outputs = self.model.inference_step(inference_state[item_index], None, target, operation)
                         inference_state[item_index] = outputs[1]
                         for score in outputs[0]:
                             temp_score[item_index] = score
