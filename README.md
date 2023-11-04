@@ -1,4 +1,4 @@
-# Multi-Operational Mathematical Derivations in Latent Space
+# [Multi-Operational Mathematical Derivations in Latent Space](https://www.arxiv.org/abs/2311.01230)
 
 This paper investigates the possibility of approximating multiple mathematical operations in latent space for expression derivation. To this end, we introduce different multi-operational representation paradigms, modelling mathematical operations as explicit geometric transformations. By leveraging a symbolic engine, we construct a large-scale dataset comprising 1.7M derivation steps stemming from 61K premises and 6 operators, analysing the properties of each paradigm when instantiated with state-of-the-art neural encoders.
 
